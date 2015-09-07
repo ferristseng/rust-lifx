@@ -1,0 +1,9 @@
+[package]
+name = "lifx"
+version = "0.1.0"
+authors = ["vagrant"]
+
+[dependencies]
+byteorder = "*"
+rustc-serialize = "*"
+net2 = { version = "*", features = ["nightly"] }
