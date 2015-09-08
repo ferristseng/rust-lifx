@@ -1,13 +1,13 @@
+use std::fmt::{Formatter, Debug, Error};
+
 use header::Header;
 use payload::Payload;
-
 use rustc_serialize::{Encoder, Encodable, Decoder, Decodable};
 
 
-const CLIENT_ID: u32 = 1014;
+const CLIENT_ID: u32 = 1015;
 
 
-#[derive(Debug)]
 pub struct Message {
   header: Header,
   payload: Payload
@@ -27,6 +27,12 @@ impl Message {
         msg.typ()),
       payload: msg
     }
+  }
+}
+
+impl Debug for Message {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    write!(f, "({:#X}) {:?}", self.header.target(), self.payload)
   }
 }
 

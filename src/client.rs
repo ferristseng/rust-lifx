@@ -58,8 +58,6 @@ impl Client {
     thread::spawn(move || {
       let mut buf = [0; 256];
 
-      println!("HERE");
-
       while !closed.load(Ordering::SeqCst) {
         let (amt, src) = socket.recv_from(&mut buf[..]).unwrap();
         let resp = serialize::decode::<Message>(&buf[..amt]).unwrap();

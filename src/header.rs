@@ -44,6 +44,9 @@ impl Header {
 	}
 
 	#[inline(always)]
+	pub fn target(&self) -> u64 { self.target }
+
+	#[inline(always)]
 	pub fn typ(&self) -> u16 { self.typ }
 
 	#[inline(always)]
