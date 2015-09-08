@@ -1,6 +1,41 @@
 use std::convert::Into;
+use std::fmt::{Debug, Formatter, Error};
 
-use rustc_serialize::Decoder;
+use rustc_serialize::{Decodable, Decoder};
+
+
+/// Labels from a LiFX blub are always 32 byte strings (not null terminated).
+/// Decodes a 32 byte string.
+///
+fn decode_32_byte_str<D : Decoder>(d: &mut D) -> Result<String, D::Error> {
+  let mut s = Vec::with_capacity(32);
+
+  for _ in 0..32 { 
+    let b = try!(d.read_u8());
+    if b == 0 { break; }
+    s.push(b) 
+  }
+
+  unsafe { Ok(String::from_utf8_unchecked(s)) }
+}
+
+
+/// Decodes a 16 byte array.
+///
+fn decode_16_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 16], D::Error> {
+  let mut arr = [0; 16];
+  for i in 0..16 { arr[i] = try!(d.read_u8()); }
+  Ok(arr)
+}
+
+
+/// Decodes a 64 byte array.
+///
+fn decode_64_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
+  let mut arr = [0; 64];
+  for i in 0..64 { arr[i] = try!(d.read_u8()); }
+  Ok(arr)
+}
 
 
 /// Service enumeration.
@@ -69,7 +104,31 @@ impl From<u16> for Power {
 }
 
 
-/// Payload enumeration.
+/// HSBK (Hue, Saturation, Brightness, Kelvin)
+///
+#[derive(RustcEncodable, RustcDecodable, Debug)]
+pub struct HSBK {
+  hue: u16,
+  saturation: u16,
+  brightness: u16,
+  kelvin: u16
+}
+
+impl HSBK {
+  pub fn new(h: u16, s: u16, b: u16, k: u16) -> HSBK {
+    assert!(k >= 2500 && k <= 9000);
+
+    HSBK { hue: h, saturation: s, brightness: b, kelvin: k }
+  }
+}
+
+
+/// Payload enumeration. 
+///
+/// # Notes 
+////
+///   * This enum is encodable, but not decodable (since it needs the message 
+///     type which is only present in the header)!
 ///
 #[derive(Debug)]
 pub enum Payload {
@@ -118,6 +177,11 @@ impl Payload {
     }
   }
 
+  /// Yes, this is scary huge. All it is doing is decoding the specific payloads
+  /// depending on the tag that was in the message header. Some of these messages
+  /// technically aren't even sent by a LiFX bulb, but are still implemented 
+  /// anyways.
+  ///
   pub fn decode<D : Decoder>(d: &mut D, tag: u16) -> Result<Payload, D::Error> {
     match tag {
       2 => 
@@ -181,17 +245,9 @@ impl Payload {
         Ok(Payload::Device(Device::GetLabel)),
       25 => 
         {
-          let mut s = Vec::with_capacity(32);
+          let label = try!(decode_32_byte_str(d));
 
-          for _ in 0..32 { 
-            let b = try!(d.read_u8());
-            if b == 0 { break; }
-            s.push(b) 
-          }
-
-          unsafe {
-            Ok(Payload::Device(Device::StateLabel(String::from_utf8_unchecked(s))))
-          }
+          Ok(Payload::Device(Device::StateLabel(label)))
         },
       32 =>
         Ok(Payload::Device(Device::GetVersion)),
@@ -215,6 +271,50 @@ impl Payload {
         }
       45 =>
         Ok(Payload::Device(Device::Acknowledgement)),
+      48 =>
+        Ok(Payload::Device(Device::GetLocation)),
+      50 =>
+        {
+          let location = try!(decode_16_byte_arr(d));
+          let label = try!(decode_32_byte_str(d));
+          let updated = try!(d.read_u64());
+
+          Ok(Payload::Device(Device::StateLocation(location, label, updated)))
+        }
+      51 => 
+        Ok(Payload::Device(Device::GetGroup)),
+      53 =>
+        {
+          let group = try!(decode_16_byte_arr(d));
+          let label = try!(decode_32_byte_str(d));
+          let updated = try!(d.read_u64());
+
+          Ok(Payload::Device(Device::StateGroup(group, label, updated)))
+        }
+      58 =>
+        Ok(Payload::Device(Device::EchoRequest(try!(decode_64_byte_arr(d))))),
+      59 =>
+        Ok(Payload::Device(Device::EchoResponse(try!(decode_64_byte_arr(d))))),
+      101 => 
+        Ok(Payload::Light(Light::Get)),
+      102 => 
+        {
+          let _ = try!(d.read_u8());
+          let color = try!(HSBK::decode(d));
+          let duration = try!(d.read_u32());
+
+          Ok(Payload::Light(Light::SetColor(color, duration)))
+        }
+      107 =>
+        {
+          let color = try!(HSBK::decode(d));
+          let _ = try!(d.read_i16());
+          let power = try!(d.read_u16());
+          let label = try!(decode_32_byte_str(d));
+          let _ = try!(d.read_u64());
+
+          Ok(Payload::Light(Light::State(color, power, label)))
+        }
       116 =>
         Ok(Payload::Light(Light::GetPower)),
       117 =>
@@ -235,7 +335,6 @@ impl Payload {
 
 /// Device message.
 ///
-#[derive(Debug)]
 pub enum Device {
   GetService,
   StateService(Service, u32),
@@ -256,7 +355,13 @@ pub enum Device {
   StateVersion(u32, u32, u32),
   GetInfo,
   StateInfo(u64, u64, u64),
-  Acknowledgement
+  Acknowledgement,
+  GetLocation,
+  StateLocation([u8; 16], String, u64),
+  GetGroup,
+  StateGroup([u8; 16], String, u64),
+  EchoRequest([u8; 64]),
+  EchoResponse([u8; 64])
 }
 
 impl Device {
@@ -284,7 +389,13 @@ impl Device {
       StateVersion(_, _, _) => 33,
       GetInfo => 34,
       StateInfo(_, _, _) => 35,
-      Acknowledgement => 45
+      Acknowledgement => 45,
+      GetLocation => 48,
+      StateLocation(_, _, _) => 50,
+      GetGroup => 51,
+      StateGroup(_, _, _) => 53,
+      EchoRequest(_) => 58,
+      EchoResponse(_) => 59
     }
   }
 
@@ -305,7 +416,7 @@ impl Device {
     match *self {
       GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | 
       GetWifiFirmware | GetPower | SetPower(_) | GetLabel | GetVersion | 
-      GetInfo => true,
+      GetInfo | GetLocation | GetGroup | EchoRequest(_) => true,
       _ => false
     }
   }
@@ -317,15 +428,48 @@ impl Device {
     match *self {
       GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | 
       GetWifiFirmware | GetPower | GetLabel| GetVersion | GetInfo | 
-      Acknowledgement => 0,
+      Acknowledgement | GetLocation | GetGroup => 0,
       SetPower(_) | StatePower(_) => 2,
       StateService(_, _) => 5,
       StateVersion(_, _, _) => 12,
       StateHostInfo(_, _, _, _) | StateWifiInfo(_, _, _, _) => 14,
       StateHostFirmware(_, _, _) | StateWifiFirmware(_, _, _) => 20,
       StateInfo(_, _, _) => 24,
-      StateLabel(_) => 32
+      StateLabel(_) => 32,
+      StateLocation(_, _, _) | StateGroup(_, _, _) => 56,
+      EchoRequest(_) | EchoResponse(_) => 64
     }
+  }
+}
+
+impl Debug for Device {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    GetService,
+    StateService(Service, u32),
+    GetHostInfo,
+    StateHostInfo(f32, u32, u32, i16),
+    GetHostFirmware,
+    StateHostFirmware(u64, u64, u32),
+    GetWifiInfo,
+    StateWifiInfo(f32, u32, u32, i16),
+    GetWifiFirmware,
+    StateWifiFirmware(u64, u64, u32),
+    GetPower,
+    SetPower(Power),
+    StatePower(Power),
+    GetLabel,
+    StateLabel(String),
+    GetVersion,
+    StateVersion(u32, u32, u32),
+    GetInfo,
+    StateInfo(u64, u64, u64),
+    Acknowledgement,
+    GetLocation,
+    StateLocation([u8; 16], String, u64),
+    GetGroup,
+    StateGroup([u8; 16], String, u64),
+    EchoRequest([u8; 64]),
+    EchoResponse([u8; 64])
   }
 }
 
@@ -334,6 +478,9 @@ impl Device {
 ///
 #[derive(Debug)]
 pub enum Light {
+  Get,
+  SetColor(HSBK, u32),
+  State(HSBK, u16, String),  
   GetPower,
   SetPower(Power, u32),
   StatePower(Power)
@@ -345,6 +492,9 @@ impl Light {
     use Light::*;
 
     match *self {
+      Get => 101,
+      SetColor(_, _) => 102,
+      State(_, _, _) => 107,
       GetPower => 116,
       SetPower(_, _) => 117,
       StatePower(_) => 118
@@ -359,7 +509,7 @@ impl Light {
     use Light::*;
 
     match *self {
-      GetPower | SetPower(_, _) => true,
+      Get | GetPower | SetPower(_, _) | SetColor(_, _) => true,
       _ => false
     }
   }
@@ -369,9 +519,11 @@ impl Light {
     use Light::*;
 
     match *self {
-      GetPower => 0,
+      Get | GetPower => 0,
       StatePower(_) => 2,
-      SetPower(_, _) => 6
+      SetPower(_, _) => 6,
+      SetColor(_, _) => 13,
+      State(_, _, _) => 24
     }
   }
 }
