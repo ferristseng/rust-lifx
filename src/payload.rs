@@ -1,7 +1,7 @@
 use std::convert::Into;
 use std::fmt::{Debug, Formatter, Error};
 
-use rustc_serialize::{Decodable, Decoder};
+use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 
 /// Labels from a LiFX blub are always 32 byte strings (not null terminated).
@@ -40,7 +40,7 @@ fn decode_64_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
 
 /// Service enumeration.
 ///
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Service {
   Udp,
   Reserved
@@ -73,7 +73,7 @@ impl From<u8> for Service {
 
 /// Power level for Device::SetPower and Device::GetPower.
 ///
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub enum Power {
   Standby,
   Max
@@ -200,19 +200,19 @@ impl Payload {
           let signal = try!(d.read_f32());
           let tx = try!(d.read_u32());
           let rx = try!(d.read_u32());
-          let reserved = try!(d.read_i16());
+          let _ = try!(d.read_i16());
 
-          Ok(Payload::Device(Device::StateHostInfo(signal, tx, rx, reserved)))
+          Ok(Payload::Device(Device::StateHostInfo(signal, tx, rx)))
         }
       14 =>
         Ok(Payload::Device(Device::GetHostFirmware)),
       15 =>
         {
           let build = try!(d.read_u64());
-          let reserved = try!(d.read_u64());
+          let _ = try!(d.read_u64());
           let version = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateHostFirmware(build, reserved, version)))
+          Ok(Payload::Device(Device::StateHostFirmware(build, version)))
         }
       16 =>
         Ok(Payload::Device(Device::GetWifiInfo)),
@@ -221,19 +221,19 @@ impl Payload {
           let signal = try!(d.read_f32());
           let tx = try!(d.read_u32());
           let rx = try!(d.read_u32());
-          let reserved = try!(d.read_i16());
+          let _ = try!(d.read_i16());
 
-          Ok(Payload::Device(Device::StateWifiInfo(signal, tx, rx, reserved)))
+          Ok(Payload::Device(Device::StateWifiInfo(signal, tx, rx)))
         }
       18 =>
         Ok(Payload::Device(Device::GetWifiFirmware)),
       19 => 
         {
           let build = try!(d.read_u64());
-          let reserved = try!(d.read_u64());
+          let _ = try!(d.read_u64());
           let version = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateWifiFirmware(build, reserved, version)))
+          Ok(Payload::Device(Device::StateWifiFirmware(build, version)))
         }
       20 =>
         Ok(Payload::Device(Device::GetPower)),
@@ -332,6 +332,17 @@ impl Payload {
   } 
 }
 
+impl Encodable for Payload {
+  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    use Payload::*;
+
+    match *self {
+      Device(ref devm) => devm.encode(s),
+      Light(ref lightm) => lightm.encode(s) 
+    }
+  }
+}
+
 
 /// Device message.
 ///
@@ -339,13 +350,13 @@ pub enum Device {
   GetService,
   StateService(Service, u32),
   GetHostInfo,
-  StateHostInfo(f32, u32, u32, i16),
+  StateHostInfo(f32, u32, u32),
   GetHostFirmware,
-  StateHostFirmware(u64, u64, u32),
+  StateHostFirmware(u64, u32),
   GetWifiInfo,
-  StateWifiInfo(f32, u32, u32, i16),
+  StateWifiInfo(f32, u32, u32),
   GetWifiFirmware,
-  StateWifiFirmware(u64, u64, u32),
+  StateWifiFirmware(u64, u32),
   GetPower,
   SetPower(Power),
   StatePower(Power),
@@ -373,13 +384,13 @@ impl Device {
       GetService => 2,
       StateService(_, _) => 3,
       GetHostInfo => 12,
-      StateHostInfo(_, _, _, _) => 13,
+      StateHostInfo(_, _, _) => 13,
       GetHostFirmware => 14,
-      StateHostFirmware(_, _, _) => 15,
+      StateHostFirmware(_, _) => 15,
       GetWifiInfo => 16,
-      StateWifiInfo(_, _, _, _) => 17,
+      StateWifiInfo(_, _, _) => 17,
       GetWifiFirmware => 18,
-      StateWifiFirmware(_, _, _) => 19,
+      StateWifiFirmware(_, _) => 19,
       GetPower => 20,
       SetPower(_) => 21,
       StatePower(_) => 22,
@@ -432,8 +443,8 @@ impl Device {
       SetPower(_) | StatePower(_) => 2,
       StateService(_, _) => 5,
       StateVersion(_, _, _) => 12,
-      StateHostInfo(_, _, _, _) | StateWifiInfo(_, _, _, _) => 14,
-      StateHostFirmware(_, _, _) | StateWifiFirmware(_, _, _) => 20,
+      StateHostInfo(_, _, _) | StateWifiInfo(_, _, _) => 14,
+      StateHostFirmware(_, _) | StateWifiFirmware(_, _) => 20,
       StateInfo(_, _, _) => 24,
       StateLabel(_) => 32,
       StateLocation(_, _, _) | StateGroup(_, _, _) => 56,
@@ -444,32 +455,68 @@ impl Device {
 
 impl Debug for Device {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-    GetService,
-    StateService(Service, u32),
-    GetHostInfo,
-    StateHostInfo(f32, u32, u32, i16),
-    GetHostFirmware,
-    StateHostFirmware(u64, u64, u32),
-    GetWifiInfo,
-    StateWifiInfo(f32, u32, u32, i16),
-    GetWifiFirmware,
-    StateWifiFirmware(u64, u64, u32),
-    GetPower,
-    SetPower(Power),
-    StatePower(Power),
-    GetLabel,
-    StateLabel(String),
-    GetVersion,
-    StateVersion(u32, u32, u32),
-    GetInfo,
-    StateInfo(u64, u64, u64),
-    Acknowledgement,
-    GetLocation,
-    StateLocation([u8; 16], String, u64),
-    GetGroup,
-    StateGroup([u8; 16], String, u64),
-    EchoRequest([u8; 64]),
-    EchoResponse([u8; 64])
+    use Device::*;
+
+    match *self {
+      GetService => 
+        write!(f, "GetService"),
+      StateService(serv, port) => 
+        write!(f, "StateService({:?}, {})", serv, port),
+      GetHostInfo => 
+        write!(f, "GetHostInfo"),
+      StateHostInfo(signal, tx, rx) =>
+        write!(f, "StateHostInfo({}, {}, {})", signal, tx, rx),
+      GetHostFirmware => 
+        write!(f, "GetHostFirmware"),
+      StateHostFirmware(build, version) =>
+        write!(f, "StateHostFirmware({}, {})", build, version),
+      GetWifiInfo =>
+        write!(f, "GetWifiInfo"),
+      StateWifiInfo(signal, tx, rx) =>
+        write!(f, "StateWifiInfo({}, {}, {})", signal, tx, rx),
+      GetWifiFirmware =>
+        write!(f, "GetWifiFirmware"),
+      StateWifiFirmware(build, version) =>
+        write!(f, "StateWifiFirmware({}, {})", build, version),
+      GetPower =>
+        write!(f, "GetPower"),
+      SetPower(pow) =>
+        write!(f, "SetPower({:?})", pow),
+      StatePower(pow) =>
+        write!(f, "StatePower({:?})", pow),
+      GetLabel =>
+        write!(f, "GetLabel"),
+      StateLabel(ref label) =>
+        write!(f, "StateLabel({})", label),
+      GetVersion =>
+        write!(f, "GetVersion"),
+      StateVersion(vendor, product, version) =>
+        write!(f, "StateVersion({}, {}, {})", vendor, product, version),
+      GetInfo =>
+        write!(f, "GetInfo"),
+      StateInfo(time, uptime, downtime) =>
+        write!(f, "StateInfo({}, {}, {})", time, uptime, downtime),
+      Acknowledgement =>
+        write!(f, "Acknowledgement"),
+      GetLocation =>
+        write!(f, "GetLocation"),
+      StateLocation(_, ref label, updated) =>
+        write!(f, "StateLocation([16], {}, {})", label, updated),
+      GetGroup =>
+        write!(f, "GetGroup"),
+      StateGroup(_, ref label, updated) => 
+        write!(f, "StateGroup([16], {}, {})", label, updated),
+      EchoRequest(_) => 
+        write!(f, "EchoRequest([64])"),
+      EchoResponse(_) => 
+        write!(f, "EchoResponse([64])")
+    }
+  }
+}
+
+impl Encodable for Device {
+  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    Ok(())
   }
 }
 
@@ -525,5 +572,11 @@ impl Light {
       SetColor(_, _) => 13,
       State(_, _, _) => 24
     }
+  }
+}
+
+impl Encodable for Light {
+  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    Ok(())
   }
 }

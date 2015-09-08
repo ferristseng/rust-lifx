@@ -43,6 +43,7 @@ impl Encodable for Message {
       self.header.size() as usize,
       |mut s| {
         try!(s.emit_struct_field("header", 0, |mut s| self.header.encode(s)));
+        try!(s.emit_struct_field("payload", 1, |mut s| self.payload.encode(s)));
         Ok(())
       })
   }
