@@ -70,6 +70,22 @@ impl From<u8> for Service {
   }
 }
 
+impl Encodable for Service {
+  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    use Service::*;
+
+    let id = self.clone().into();
+    let var = match *self {
+      Udp => "Udp",
+      Reserved => "Reserved"
+    };
+
+    s.emit_enum(
+      "Service", 
+      |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u8(id)))
+  }
+}
+
 
 /// Power level for Device::SetPower and Device::GetPower.
 ///
@@ -103,6 +119,22 @@ impl From<u16> for Power {
   }
 }
 
+impl Encodable for Power {
+  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    use Power::*;
+
+    let id = self.clone().into();
+    let var = match *self {
+      Standby => "Standby",
+      Max => "Max"
+    };
+
+    s.emit_enum(
+      "Power", 
+      |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u16(id)))
+  }
+}
+
 
 /// HSBK (Hue, Saturation, Brightness, Kelvin)
 ///
@@ -130,7 +162,7 @@ impl HSBK {
 ///   * This enum is encodable, but not decodable (since it needs the message 
 ///     type which is only present in the header)!
 ///
-#[derive(Debug)]
+#[derive(Debug, RustcEncodable)]
 pub enum Payload {
   Device(Device),
   Light(Light)
@@ -332,20 +364,10 @@ impl Payload {
   } 
 }
 
-impl Encodable for Payload {
-  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-    use Payload::*;
-
-    match *self {
-      Device(ref devm) => devm.encode(s),
-      Light(ref lightm) => lightm.encode(s) 
-    }
-  }
-}
-
 
 /// Device message.
 ///
+#[derive(RustcEncodable)]
 pub enum Device {
   GetService,
   StateService(Service, u32),
@@ -514,16 +536,10 @@ impl Debug for Device {
   }
 }
 
-impl Encodable for Device {
-  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-    Ok(())
-  }
-}
-
 
 /// Light messages.
 ///
-#[derive(Debug)]
+#[derive(Debug, RustcEncodable)]
 pub enum Light {
   Get,
   SetColor(HSBK, u32),
@@ -572,11 +588,5 @@ impl Light {
       SetColor(_, _) => 13,
       State(_, _, _) => 24
     }
-  }
-}
-
-impl Encodable for Light {
-  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-    Ok(())
   }
 }
