@@ -1,25 +1,74 @@
-use std::ops::Drop;
 use std::thread;
 use std::thread::JoinHandle;
 use std::sync::{Arc, RwLock};
-use std::sync::atomic::{Ordering, AtomicBool};
+use std::sync::atomic::{Ordering, AtomicBool, AtomicUsize, 
+  ATOMIC_USIZE_INIT};
+use std::ops::{Deref, Drop};
 use std::collections::HashMap;
-use std::net::{UdpSocket, ToSocketAddrs};
+use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 
 use serialize;
 use message::Message;
-use payload::{Payload, Device};
+use payload::{Service, Payload, Device};
 use net2::{UdpBuilder, UdpSocketExt};
 
 
+/// udp broadcast ip address and lifx default port. 
+///
 static BROADCAST_IP: &'static str = "255.255.255.255:56700";
 
 
-#[derive(Default)]
-pub struct Bulb {
-  label: String,
-  port: u32,
+/// sequence number counter used to confirm acks.
+///
+static SEQUENCE_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
+
+
+/// returns the next sequence number (global, shared counter).
+///
+fn next_sequence() -> u8 {
+  SEQUENCE_COUNTER.fetch_add(1, Ordering::SeqCst) as u8
+}
+
+
+/// sends a message to the specified address.
+///
+fn send_msg<S : Deref<Target = UdpSocket>, A : ToSocketAddrs>(
+  socket: &S, 
+  addr: A,
+  payload: Payload, 
+  ack_required: bool, 
   target: u64
+) -> Result<u8, String> 
+{
+  let seq = next_sequence();
+  let msg = Message::new(payload, ack_required, target, seq);
+  let encoded = try!(serialize::encode(&msg).or(err!("failed to encode")));
+  let bytes = try!(
+    socket.send_to(&encoded[..], addr).or(err!("failed to send message")));
+
+  if bytes == encoded.len() {
+    Ok(seq)
+  } else {
+    err!("wrong number of bytes written")
+  }
+}
+
+
+/// a bulb is a LiFX device where the service is Udp. 
+///
+#[derive(Clone)]
+pub struct Bulb<A : ToSocketAddrs> {
+  label: Option<String>,
+  ip: A,
+  port: u32,
+  target: u64,
+  socket: Arc<UdpSocket>
+}
+
+impl<A> Bulb<A> where A : ToSocketAddrs {
+  pub fn send_msg(&self, payload: Payload, ack_required: bool) -> Result<u8, String> {
+    send_msg(&self.socket, &self.ip, payload, ack_required, self.target)
+  } 
 }
 
 
@@ -28,7 +77,7 @@ pub struct Bulb {
 pub struct Client {
   closed: Arc<AtomicBool>,
   socket: Arc<UdpSocket>,
-  devices: Arc<RwLock<HashMap<u64, Bulb>>>,
+  devices: Arc<RwLock<HashMap<u64, Bulb<SocketAddr>>>>,
 }
 
 impl Client {
@@ -51,9 +100,13 @@ impl Client {
     Ok(client)
   }
 
+
+  /// listens for certain messages, and updates the client object accordingly
+  ///
   pub fn listen(&self) -> JoinHandle<()> {
     let socket = self.socket.clone();
     let closed = self.closed.clone();
+    let devices = self.devices.clone();
 
     thread::spawn(move || {
       let mut buf = [0; 256];
@@ -62,20 +115,44 @@ impl Client {
         let (amt, src) = socket.recv_from(&mut buf[..]).unwrap();
         let resp = serialize::decode::<Message>(&buf[..amt]).unwrap();
         
-        println!("{:?}", resp);
+        match *resp.payload() {
+          Payload::Device(Device::StateService(Service::Udp, port)) =>
+            {
+              devices.write().unwrap().insert(
+                resp.target(), 
+                Bulb { 
+                  label: None, 
+                  ip: src,
+                  port: port, 
+                  target: resp.target(),
+                  socket: socket.clone()
+                });
+            }
+          _ => 
+            ()
+        }
       }
     })
   }
 
-  /// broadcasts a Device::GetService payload.
+  /// broadcasts messages to the client at a set interval. use `listen` to 
+  /// have the client process certain messages.
   ///
-  pub fn get_services(&self) -> Result<(), String> {
+  pub fn discover(&self, wait: u32) -> JoinHandle<()> {
     use Device::*;
 
-    try!(self.socket.set_broadcast(true).or(err!("failed to turn on to broadcast")));
-    try!(self.send_msg(BROADCAST_IP, Payload::Device(GetService), false, 0));
-    try!(self.socket.set_broadcast(false).or(err!("failed to turn off broadcast")));
-    Ok(())
+    let socket = self.socket.clone();
+    let closed = self.closed.clone();
+
+    thread::spawn(move || {
+      while !closed.load(Ordering::SeqCst) {
+        let _ = socket.set_broadcast(true);
+        let _ = send_msg(&socket, BROADCAST_IP, Payload::Device(GetService), false, 0);
+        let _ = socket.set_broadcast(false);
+
+        thread::sleep_ms(wait);
+      }
+    })
   }
 
   /// sends a message to the specified address.
@@ -86,18 +163,9 @@ impl Client {
     payload: Payload, 
     ack_required: bool, 
     target: u64
-  ) -> Result<(), String> 
+  ) -> Result<u8, String> 
   {
-    let msg = Message::new(payload, ack_required, target);
-    let encoded = try!(serialize::encode(&msg).or(err!("failed to encode")));
-    let bytes = try!(
-      self.socket.send_to(&encoded[..], addr).or(err!("failed to send message")));
-
-    if bytes == encoded.len() {
-      Ok(())
-    } else {
-      err!("wrong number of bytes written")
-    }
+    send_msg(&self.socket, addr, payload, ack_required, target)
   }
 
   /// closes a client. it will no longer receive responses from the socket.
@@ -119,4 +187,16 @@ impl Drop for Client {
   fn drop(&mut self) {
     self.close();
   }
+}
+
+
+#[test]
+fn test_sequence_counter_overflow() {
+  use std::u8;
+
+  assert_eq!(0, next_sequence());
+  for _ in 1..(u8::MAX as usize) + 1 { next_sequence(); }
+  assert_eq!(0, next_sequence());
+  for _ in 1..(u8::MAX as usize) + 1 { next_sequence(); }
+  assert_eq!(0, next_sequence());
 }

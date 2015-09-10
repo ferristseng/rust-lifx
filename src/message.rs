@@ -5,7 +5,7 @@ use payload::Payload;
 use rustc_serialize::{Encoder, Encodable, Decoder, Decodable};
 
 
-const CLIENT_ID: u32 = 1015;
+const CLIENT_ID: u32 = 1111;
 
 
 pub struct Message {
@@ -14,7 +14,9 @@ pub struct Message {
 }
 
 impl Message {
-  pub fn new(msg: Payload, ack_required: bool, target: u64) -> Message {
+  /// creates a new message.
+  ///
+  pub fn new(msg: Payload, ack_required: bool, target: u64, seq: u8) -> Message {
     Message {
       header: Header::new(
         msg.size() + Header::mem_size(), 
@@ -23,11 +25,17 @@ impl Message {
         target,
         ack_required,
         msg.requires_response(),
-        0,
+        seq,
         msg.typ()),
       payload: msg
     }
   }
+
+  #[inline(always)]
+  pub fn payload(&self) -> &Payload { &self.payload }
+
+  #[inline(always)]
+  pub fn target(&self) -> u64 { self.header.target() }
 }
 
 impl Debug for Message {

@@ -207,7 +207,7 @@ fn test_encode_decode_json() {
 }
 
 #[test]
-fn tests_encode_decode_serializer() {
+fn test_encode_decode_serializer() {
 	use serialize;
 
 	let header: Header = Header::new(128, true, 256, 1000, false, false, 1, 12); 
