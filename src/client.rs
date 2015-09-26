@@ -47,7 +47,7 @@ fn send_msg<S : Deref<Target = UdpSocket>, A : ToSocketAddrs>(
   let bytes = try!(
     socket.send_to(&encoded[..], addr).or(err!("failed to send message")));
 
-  println!("    Sending: {:?}", msg);
+  debug!(target: "device.out", "    Sending: {:?}", msg);
 
   if bytes == encoded.len() {
     Ok(seq)
@@ -133,7 +133,7 @@ impl Client {
         match *resp.payload() {
           Payload::Device(Device::StateService(Service::Udp, port)) =>
             {
-              println!("Received device with port: {}", port);
+              info!(target: "device.in", "Received device with port: {}", port);
 
               devices.write().unwrap().entry(resp.target()).or_insert(
                 Bulb { 
@@ -144,19 +144,19 @@ impl Client {
                   socket: socket.clone()
                 });
 
-              println!("Devices:");
+              info!(target: "device.in", "Devices:");
 
               for d in devices.read().unwrap().values() {
-                println!("  Devices: {}", d); 
-
-                let _ = d.send_msg(Payload::Device(Device::GetLabel), false);
-
-                thread::sleep_ms(200);
+                info!(target: "device.in", "  Devices: {}", d); 
               }
             }
           Payload::Device(Device::StateLabel(ref label)) =>
             {
-              println!("Received device label: '{:?}' for {}", label, resp.target());
+              info!(
+                target: "device.in", 
+                "Received device label: '{:?}' for {}", 
+                label, 
+                resp.target());
 
               // TODO: Move the label with some UNSAFE code?
               if let Some(bulb) = devices.write().unwrap().get_mut(&resp.target()) {
@@ -178,6 +178,7 @@ impl Client {
 
     let socket = self.socket.clone();
     let closed = self.closed.clone();
+    let devices = self.devices.clone();
 
     thread::spawn(move || {
       while !closed.load(Ordering::SeqCst) {
@@ -187,6 +188,12 @@ impl Client {
         let _ = socket.set_broadcast(true);
         let _ = send_msg(&socket, BROADCAST_IP, Payload::Device(GetService), false, 0);
         let _ = socket.set_broadcast(false);
+
+        for d in devices.read().unwrap().values() {
+          let _ = d.send_msg(Payload::Device(Device::GetLabel), false);
+
+          thread::sleep_ms(200);
+        }
 
         thread::sleep_ms(wait);
       }

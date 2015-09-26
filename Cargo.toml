@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["vagrant"]
 
 [dependencies]
+log = "*"
 byteorder = "*"
 rustc-serialize = "*"
 net2 = { version = "*", features = ["nightly"] }
+
+[dev-dependencies]
+env_logger = "*"

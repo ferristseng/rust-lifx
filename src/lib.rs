@@ -3,6 +3,7 @@
 extern crate net2;
 extern crate byteorder;
 extern crate rustc_serialize;
+#[macro_use] extern crate log;
 
 macro_rules! err(
   ($s : expr) => (Err($s.to_string()))
