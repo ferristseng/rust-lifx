@@ -35,7 +35,8 @@ run:
   source ./config_logger.sh
 ```
 
-For more detailed control, you the following loggers you can set:
+For more detailed control, you can set the logging level for the following 
+loggers:
 
   * device.in - all messages from any device that the client can intercept 
   * device.out - all output messages from the client
