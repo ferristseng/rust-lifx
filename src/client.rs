@@ -47,6 +47,8 @@ fn send_msg<S : Deref<Target = UdpSocket>, A : ToSocketAddrs>(
   let bytes = try!(
     socket.send_to(&encoded[..], addr).or(err!("failed to send message")));
 
+  println!("    Sending: {:?}", msg);
+
   if bytes == encoded.len() {
     Ok(seq)
   } else {
@@ -76,10 +78,11 @@ impl<A> Display for Bulb<A> where A : ToSocketAddrs + Display {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
     write!(
       f, 
-      "'{:?}' ({}:{})", 
+      "'{:?}' ({}:{} {})", 
       self.label,
       self.ip, 
-      self.port)
+      self.port,
+      self.target)
   }
 }
 
@@ -132,8 +135,7 @@ impl Client {
             {
               println!("Received device with port: {}", port);
 
-              devices.write().unwrap().insert(
-                resp.target(), 
+              devices.write().unwrap().entry(resp.target()).or_insert(
                 Bulb { 
                   label: None, 
                   ip: src,
@@ -146,6 +148,19 @@ impl Client {
 
               for d in devices.read().unwrap().values() {
                 println!("  Devices: {}", d); 
+
+                let _ = d.send_msg(Payload::Device(Device::GetLabel), false);
+
+                thread::sleep_ms(200);
+              }
+            }
+          Payload::Device(Device::StateLabel(ref label)) =>
+            {
+              println!("Received device label: '{:?}' for {}", label, resp.target());
+
+              // TODO: Move the label with some UNSAFE code?
+              if let Some(bulb) = devices.write().unwrap().get_mut(&resp.target()) {
+                bulb.label = Some(label.clone());
               }
             }
           _ => 
@@ -166,6 +181,9 @@ impl Client {
 
     thread::spawn(move || {
       while !closed.load(Ordering::SeqCst) {
+        // TODO: Technically, there should be a LOCK on the socket here. Messages
+        // should not be able to be sent between the time the socket is set to 
+        // broadcast.
         let _ = socket.set_broadcast(true);
         let _ = send_msg(&socket, BROADCAST_IP, Payload::Device(GetService), false, 0);
         let _ = socket.set_broadcast(false);
