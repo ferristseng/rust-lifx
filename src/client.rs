@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{Ordering, AtomicBool, AtomicUsize, 
   ATOMIC_USIZE_INIT};
 use std::ops::{Deref, Drop};
+use std::fmt::{Display, Formatter, Error};
 use std::collections::HashMap;
 use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 
@@ -71,6 +72,17 @@ impl<A> Bulb<A> where A : ToSocketAddrs {
   } 
 }
 
+impl<A> Display for Bulb<A> where A : ToSocketAddrs + Display {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    write!(
+      f, 
+      "'{:?}' ({}:{})", 
+      self.label,
+      self.ip, 
+      self.port)
+  }
+}
+
 
 /// the client handles device messages from from any lifx bulb. 
 ///
@@ -118,6 +130,8 @@ impl Client {
         match *resp.payload() {
           Payload::Device(Device::StateService(Service::Udp, port)) =>
             {
+              println!("Received device with port: {}", port);
+
               devices.write().unwrap().insert(
                 resp.target(), 
                 Bulb { 
@@ -127,6 +141,12 @@ impl Client {
                   target: resp.target(),
                   socket: socket.clone()
                 });
+
+              println!("Devices:");
+
+              for d in devices.read().unwrap().values() {
+                println!("  Devices: {}", d); 
+              }
             }
           _ => 
             ()
