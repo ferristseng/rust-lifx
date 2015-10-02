@@ -4,6 +4,73 @@ use std::fmt::{Debug, Formatter, Error};
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 
+/// Preseeded HSBK values for convenience.
+///
+#[derive(Copy, Clone, Debug)]
+pub enum Color {
+  Red, 
+  Blue,
+  Green,
+  Violet,
+  Yellow,
+  White
+}
+
+impl Color {
+  /// Converts a Color enum value to a HSBK with varying brightness.
+  ///
+  #[inline]
+  pub fn to_hsbk(self, brightness: u16) -> HSBK {
+    use Color::*;
+
+    match self {
+      Red => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        },
+      Blue => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        },
+      Green => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        },
+      Violet => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        },
+      Yellow => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        },
+      White => 
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0
+        }
+    }
+  }
+}
+
+
 /// Labels from a LiFX blub are always 32 byte strings (not null terminated).
 /// Decodes a 32 byte string.
 ///
@@ -138,7 +205,7 @@ impl Encodable for Power {
 
 /// HSBK (Hue, Saturation, Brightness, Kelvin)
 ///
-#[derive(RustcEncodable, RustcDecodable, Debug)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Copy, Clone)]
 pub struct HSBK {
   hue: u16,
   saturation: u16,

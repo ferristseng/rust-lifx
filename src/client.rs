@@ -106,6 +106,13 @@ impl Client {
     let udp_socket = Arc::new(try!(
       udp_builder.bind(addr).or(err!("failed to bind to addr"))));
 
+    try!(udp_socket
+      .set_read_timeout_ms(Some(500))
+      .or(err!("failed to set read timeout")));
+    try!(udp_socket
+      .set_write_timeout_ms(Some(500))
+      .or(err!("failed to set write timeout")));
+
     let client = Client {
       closed: closed,
       socket: udp_socket,
@@ -114,7 +121,6 @@ impl Client {
 
     Ok(client)
   }
-
 
   /// listens for certain messages, and updates the client object accordingly
   ///
@@ -127,7 +133,10 @@ impl Client {
       let mut buf = [0; 256];
 
       while !closed.load(Ordering::SeqCst) {
-        let (amt, src) = socket.recv_from(&mut buf[..]).unwrap();
+        let (amt, src) = match socket.recv_from(&mut buf[..]) {
+          Ok(received) => received,
+          Err(_) => continue
+        };
         let resp = serialize::decode::<Message>(&buf[..amt]).unwrap();
         
         match *resp.payload() {
@@ -211,6 +220,23 @@ impl Client {
   ) -> Result<u8, String> 
   {
     send_msg(&self.socket, addr, payload, ack_required, target)
+  }
+
+  /// returns a snapshot of the devices that the client has found.
+  ///
+  pub fn devices(&self) -> HashMap<u64, Bulb<SocketAddr>> {
+    self.devices.read().unwrap().deref().clone()
+  }
+
+  /// returns a snapshot of a particular device, given its target id.
+  ///
+  pub fn device(&self, target: u64) -> Option<Bulb<SocketAddr>> {
+    match self.devices.read() {
+      Ok(devices) => 
+        devices.get(&target).map(|d| d.clone()),
+      Err(_) => 
+        None
+    }
   }
 
   /// closes a client. it will no longer receive responses from the socket.

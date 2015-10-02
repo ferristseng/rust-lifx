@@ -18,4 +18,4 @@ pub mod serialize;
 pub use client::Client;
 pub use header::Header;
 pub use message::Message;
-pub use payload::{Service, Device, Light, Payload, Power, HSBK};
+pub use payload::{Service, Device, Light, Payload, Power, HSBK, Color};

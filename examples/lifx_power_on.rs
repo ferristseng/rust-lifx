@@ -2,6 +2,7 @@ extern crate lifx;
 extern crate env_logger;
 
 use lifx::Client;
+use lifx::Light::*;
 use lifx::{Payload, Power};
 
 
@@ -11,10 +12,7 @@ static ADDR: &'static str = "10.0.1.2:56700";
 
 
 fn main() {
-  use lifx::Light::*;
-
   env_logger::init().unwrap();
-
 
   let client = Client::new("0.0.0.0:1234").unwrap();
   let _ = client.send_msg(
