@@ -44,6 +44,6 @@ fn main() {
   let _ = thread.join();
 
   for d in devices.values() {
-    println!("Device: {}", d);
+    println!("Device: {:?}", d);
   }
 }
