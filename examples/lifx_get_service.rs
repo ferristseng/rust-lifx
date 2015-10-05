@@ -6,7 +6,7 @@ extern crate env_logger;
 use std::thread;
 use std::time::Duration;
 
-use lifx::Client;
+use lifx::{GET_ALL, Client};
 
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
 
   let client = Client::new("0.0.0.0:1234").unwrap();
   let thread = client.listen();
-  let discover_thread = client.discover(1000);
+  let discover_thread = client.discover(1000, GET_ALL);
 
   println!("Waiting 10 seconds to discover devices...");
 

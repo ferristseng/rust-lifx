@@ -5,6 +5,7 @@ authors = ["vagrant"]
 
 [dependencies]
 log = "*"
+bitflags = "*"
 byteorder = "*"
 rustc-serialize = "*"
 net2 = { version = "*", features = ["nightly"] }

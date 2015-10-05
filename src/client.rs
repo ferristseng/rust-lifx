@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{Ordering, AtomicBool, AtomicUsize, 
   ATOMIC_USIZE_INIT};
 use std::ops::{Deref, Drop};
-use std::fmt::{Display, Formatter, Error};
+use std::fmt::{Display, Debug, Formatter, Error};
 use std::collections::HashMap;
 use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 
@@ -12,6 +12,9 @@ use serialize;
 use message::Message;
 use payload::{Service, Payload, Device};
 use net2::{UdpBuilder, UdpSocketExt};
+
+
+pub const MESSAGE_INTERVAL: u8 = 50;
 
 
 /// udp broadcast ip address and lifx default port. 
@@ -57,11 +60,29 @@ fn send_msg<S : Deref<Target = UdpSocket>, A : ToSocketAddrs>(
 }
 
 
+bitflags! {
+  flags DiscoverOptions: u8 {
+    const GET_LABEL         = 0b0000_0001,
+    const GET_WIFI          = 0b0000_0010,
+    const GET_LOCATION      = 0b0000_0100,
+    const GET_HOST_FIRMWARE = 0b0000_1000,
+    const GET_GROUP         = 0b0001_0000,
+    const GET_POWER         = 0b0010_0000,
+    const GET_HOST_INFO     = 0b0100_0000,
+    const GET_ALL           = GET_LABEL.bits | GET_WIFI.bits | 
+                              GET_LOCATION.bits | GET_HOST_FIRMWARE.bits | 
+                              GET_GROUP.bits | GET_POWER.bits | 
+                              GET_HOST_INFO.bits 
+  }
+}
+
+
 /// a bulb is a LiFX device where the service is Udp. 
 ///
 #[derive(Clone)]
 pub struct Bulb<A : ToSocketAddrs> {
   label: Option<String>,
+  location: Option<String>,
   ip: A,
   port: u32,
   target: u64,
@@ -69,9 +90,36 @@ pub struct Bulb<A : ToSocketAddrs> {
 }
 
 impl<A> Bulb<A> where A : ToSocketAddrs {
-  pub fn send_msg(&self, payload: Payload, ack_required: bool) -> Result<u8, String> {
+  /// returns the label of the bulb, if one was received.
+  ///
+  pub fn label(&self) -> Option<&str> {
+    match self.label {
+      Some(ref label) => Some(&label[..]),
+      None => None
+    }
+  }
+
+  /// sends a message to this bulb.
+  ///
+  pub fn send_msg(
+    &self, 
+    payload: Payload, 
+    ack_required: bool
+  ) -> Result<u8, String> {
     send_msg(&self.socket, &self.ip, payload, ack_required, self.target)
   } 
+
+  /// sends a message to this bulb, and waits the recommended amount of time.
+  ///
+  pub fn send_msg_and_wait(
+    &self, 
+    payload: Payload, 
+    ack_required: bool
+  ) -> Result<u8, String> {
+    let res = self.send_msg(payload, ack_required);
+    thread::sleep_ms(MESSAGE_INTERVAL as u32);
+    res
+  }
 }
 
 impl<A> Display for Bulb<A> where A : ToSocketAddrs + Display {
@@ -79,10 +127,24 @@ impl<A> Display for Bulb<A> where A : ToSocketAddrs + Display {
     write!(
       f, 
       "'{:?}' ({}:{} {})", 
-      self.label,
+      self.label(),
       self.ip, 
       self.port,
       self.target)
+  }
+}
+
+impl<A> Debug for Bulb<A> where A : ToSocketAddrs + Debug {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    write!(
+      f, 
+      "Bulb ({}):\n\
+         Label: '{:?}'\n\
+         Addr.: {:?}:{}", 
+      self.target,
+      self.label(),
+      self.ip, 
+      self.port)
   }
 }
 
@@ -138,6 +200,14 @@ impl Client {
           Err(_) => continue
         };
         let resp = serialize::decode::<Message>(&buf[..amt]).unwrap();
+
+        macro_rules! update_device_property(
+          ($prop:ident, $val:expr) => (
+            if let Some(bulb) = devices.write().unwrap().get_mut(&resp.target()) {
+              bulb.$prop = $val;
+            }
+          )
+        );
         
         match *resp.payload() {
           Payload::Device(Device::StateService(Service::Udp, port)) =>
@@ -147,6 +217,7 @@ impl Client {
               devices.write().unwrap().entry(resp.target()).or_insert(
                 Bulb { 
                   label: None, 
+                  location: None,
                   ip: src,
                   port: port, 
                   target: resp.target(),
@@ -156,22 +227,29 @@ impl Client {
               info!(target: "device.in", "Devices:");
 
               for d in devices.read().unwrap().values() {
-                info!(target: "device.in", "  Devices: {}", d); 
+                info!(target: "device.in", "  Devices: {:?}", d); 
               }
             }
           Payload::Device(Device::StateLabel(ref label)) =>
             {
               info!(
                 target: "device.in", 
-                "Received device label: '{:?}' for {}", 
+                "Received device label: '{:?}' for {:#X}", 
                 label, 
                 resp.target());
 
-              // TODO: Move the label with some UNSAFE code?
-              if let Some(bulb) = devices.write().unwrap().get_mut(&resp.target()) {
-                bulb.label = Some(label.clone());
-              }
+              update_device_property!(label, Some(label.clone()));
             }
+          Payload::Device(Device::StateLocation(_, ref location, _)) =>
+            {
+              info!(
+                target: "device.in",
+                "Received location label: '{:?}' for {:#X}",
+                location,
+                resp.target());
+
+              update_device_property!(location, Some(location.clone()));
+            } 
           _ => 
             ()
         }
@@ -182,7 +260,7 @@ impl Client {
   /// broadcasts messages to the client at a set interval. use `listen` to 
   /// have the client process certain messages.
   ///
-  pub fn discover(&self, wait: u32) -> JoinHandle<()> {
+  pub fn discover(&self, wait: u32, options: DiscoverOptions) -> JoinHandle<()> {
     use Device::*;
 
     let socket = self.socket.clone();
@@ -199,9 +277,40 @@ impl Client {
         let _ = socket.set_broadcast(false);
 
         for d in devices.read().unwrap().values() {
-          let _ = d.send_msg(Payload::Device(Device::GetLabel), false);
+          if !(options & GET_LABEL).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetLabel), false);
+          }
 
-          thread::sleep_ms(200);
+          if !(options & GET_POWER).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetPower), false);
+          }
+
+          if !(options & GET_LOCATION).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetLocation), false);
+          }
+
+          if !(options & GET_GROUP).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetGroup), false);
+          }
+
+          if !(options & GET_HOST_INFO).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetHostInfo), false);
+          }
+
+          if !(options & GET_HOST_FIRMWARE).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetHostFirmware), false);
+          }
+
+          if !(options & GET_WIFI).is_empty() {
+            let _ = 
+              d.send_msg_and_wait(Payload::Device(Device::GetWifiFirmware), false);
+          }
         }
 
         thread::sleep_ms(wait);
