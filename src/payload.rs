@@ -8,12 +8,12 @@ use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 ///
 #[derive(Copy, Clone, Debug)]
 pub enum Color {
-  Red, 
+  Red,
   Blue,
   Green,
   Violet,
   Yellow,
-  White
+  White,
 }
 
 impl Color {
@@ -24,48 +24,54 @@ impl Color {
     use Color::*;
 
     match self {
-      Red => 
+      Red => {
         HSBK {
           hue: 0,
           saturation: 0,
           brightness: brightness,
-          kelvin: 0
-        },
-      Blue => 
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0
-        },
-      Green => 
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0
-        },
-      Violet => 
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0
-        },
-      Yellow => 
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0
-        },
-      White => 
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0
+          kelvin: 0,
         }
+      }
+      Blue => {
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0,
+        }
+      }
+      Green => {
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0,
+        }
+      }
+      Violet => {
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0,
+        }
+      }
+      Yellow => {
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0,
+        }
+      }
+      White => {
+        HSBK {
+          hue: 0,
+          saturation: 0,
+          brightness: brightness,
+          kelvin: 0,
+        }
+      }
     }
   }
 }
@@ -74,13 +80,15 @@ impl Color {
 /// Labels from a LiFX blub are always 32 byte strings (not null terminated).
 /// Decodes a 32 byte string.
 ///
-fn decode_32_byte_str<D : Decoder>(d: &mut D) -> Result<String, D::Error> {
+fn decode_32_byte_str<D: Decoder>(d: &mut D) -> Result<String, D::Error> {
   let mut s = Vec::with_capacity(32);
 
-  for _ in 0..32 { 
+  for _ in 0..32 {
     let b = try!(d.read_u8());
-    if b == 0 { break; }
-    s.push(b) 
+    if b == 0 {
+      break;
+    }
+    s.push(b)
   }
 
   unsafe { Ok(String::from_utf8_unchecked(s)) }
@@ -89,18 +97,22 @@ fn decode_32_byte_str<D : Decoder>(d: &mut D) -> Result<String, D::Error> {
 
 /// Decodes a 16 byte array.
 ///
-fn decode_16_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 16], D::Error> {
+fn decode_16_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 16], D::Error> {
   let mut arr = [0; 16];
-  for i in 0..16 { arr[i] = try!(d.read_u8()); }
+  for i in 0..16 {
+    arr[i] = try!(d.read_u8());
+  }
   Ok(arr)
 }
 
 
 /// Decodes a 64 byte array.
 ///
-fn decode_64_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
+fn decode_64_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
   let mut arr = [0; 64];
-  for i in 0..64 { arr[i] = try!(d.read_u8()); }
+  for i in 0..64 {
+    arr[i] = try!(d.read_u8());
+  }
   Ok(arr)
 }
 
@@ -110,7 +122,7 @@ fn decode_64_byte_arr<D : Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Service {
   Udp,
-  Reserved
+  Reserved,
 }
 
 impl Into<u8> for Service {
@@ -120,7 +132,7 @@ impl Into<u8> for Service {
 
     match self {
       Udp => 1,
-      Reserved => 5
+      Reserved => 5,
     }
   }
 }
@@ -132,24 +144,23 @@ impl From<u8> for Service {
 
     match b {
       1 => Udp,
-      _ => Reserved
+      _ => Reserved,
     }
   }
 }
 
 impl Encodable for Service {
-  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+  fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
     use Service::*;
 
     let id = self.clone().into();
     let var = match *self {
       Udp => "Udp",
-      Reserved => "Reserved"
+      Reserved => "Reserved",
     };
 
-    s.emit_enum(
-      "Service", 
-      |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u8(id)))
+    s.emit_enum("Service",
+                |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u8(id)))
   }
 }
 
@@ -159,7 +170,7 @@ impl Encodable for Service {
 #[derive(Debug, Copy, Clone)]
 pub enum Power {
   Standby,
-  Max
+  Max,
 }
 
 impl Into<u16> for Power {
@@ -169,7 +180,7 @@ impl Into<u16> for Power {
 
     match self {
       Standby => 0,
-      Max => 65535
+      Max => 65535,
     }
   }
 }
@@ -181,24 +192,23 @@ impl From<u16> for Power {
 
     match v {
       0 => Standby,
-      _ => Max
+      _ => Max,
     }
   }
 }
 
 impl Encodable for Power {
-  fn encode<S : Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+  fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
     use Power::*;
 
     let id = self.clone().into();
     let var = match *self {
       Standby => "Standby",
-      Max => "Max"
+      Max => "Max",
     };
 
-    s.emit_enum(
-      "Power", 
-      |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u16(id)))
+    s.emit_enum("Power",
+                |mut s| s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u16(id)))
   }
 }
 
@@ -210,29 +220,34 @@ pub struct HSBK {
   hue: u16,
   saturation: u16,
   brightness: u16,
-  kelvin: u16
+  kelvin: u16,
 }
 
 impl HSBK {
   pub fn new(h: u16, s: u16, b: u16, k: u16) -> HSBK {
     assert!(k >= 2500 && k <= 9000);
 
-    HSBK { hue: h, saturation: s, brightness: b, kelvin: k }
+    HSBK {
+      hue: h,
+      saturation: s,
+      brightness: b,
+      kelvin: k,
+    }
   }
 }
 
 
-/// Payload enumeration. 
+/// Payload enumeration.
 ///
-/// # Notes 
-////
-///   * This enum is encodable, but not decodable (since it needs the message 
+/// # Notes
+/// /
+///   * This enum is encodable, but not decodable (since it needs the message
 ///     type which is only present in the header)!
 ///
 #[derive(Debug, RustcEncodable)]
 pub enum Payload {
   Device(Device),
-  Light(Light)
+  Light(Light),
 }
 
 impl Payload {
@@ -241,8 +256,8 @@ impl Payload {
     use Payload::*;
 
     match *self {
-      Device(ref devm) => devm.typ(), 
-      Light(ref lightm) => lightm.typ()
+      Device(ref devm) => devm.typ(),
+      Light(ref lightm) => lightm.typ(),
     }
   }
 
@@ -252,7 +267,7 @@ impl Payload {
 
     match *self {
       Device(ref devm) => devm.tagged(),
-      Light(ref lightm) => lightm.tagged()
+      Light(ref lightm) => lightm.tagged(),
     }
   }
 
@@ -262,7 +277,7 @@ impl Payload {
 
     match *self {
       Device(ref devm) => devm.size(),
-      Light(ref lightm) => lightm.size()
+      Light(ref lightm) => lightm.size(),
     }
   }
 
@@ -272,163 +287,130 @@ impl Payload {
 
     match *self {
       Device(ref devm) => devm.requires_response(),
-      Light(ref lightm) => lightm.requires_response()
+      Light(ref lightm) => lightm.requires_response(),
     }
   }
 
   /// Yes, this is scary huge. All it is doing is decoding the specific payloads
   /// depending on the tag that was in the message header. Some of these messages
-  /// technically aren't even sent by a LiFX bulb, but are still implemented 
+  /// technically aren't even sent by a LiFX bulb, but are still implemented
   /// anyways.
   ///
-  pub fn decode<D : Decoder>(d: &mut D, tag: u16) -> Result<Payload, D::Error> {
+  pub fn decode<D: Decoder>(d: &mut D, tag: u16) -> Result<Payload, D::Error> {
     match tag {
-      2 => 
-        Ok(Payload::Device(Device::GetService)),
-      3 => 
-        {
-          let service = From::from(try!(d.read_u8()));
-          let port = try!(d.read_u32());
+      2 => Ok(Payload::Device(Device::GetService)),
+      3 => {
+        let service = From::from(try!(d.read_u8()));
+        let port = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateService(service, port)))
-        }
-      12 => 
-        Ok(Payload::Device(Device::GetHostInfo)),
-      13 =>
-        {
-          let signal = try!(d.read_f32());
-          let tx = try!(d.read_u32());
-          let rx = try!(d.read_u32());
-          let _ = try!(d.read_i16());
+        Ok(Payload::Device(Device::StateService(service, port)))
+      }
+      12 => Ok(Payload::Device(Device::GetHostInfo)),
+      13 => {
+        let signal = try!(d.read_f32());
+        let tx = try!(d.read_u32());
+        let rx = try!(d.read_u32());
+        let _ = try!(d.read_i16());
 
-          Ok(Payload::Device(Device::StateHostInfo(signal, tx, rx)))
-        }
-      14 =>
-        Ok(Payload::Device(Device::GetHostFirmware)),
-      15 =>
-        {
-          let build = try!(d.read_u64());
-          let _ = try!(d.read_u64());
-          let version = try!(d.read_u32());
+        Ok(Payload::Device(Device::StateHostInfo(signal, tx, rx)))
+      }
+      14 => Ok(Payload::Device(Device::GetHostFirmware)),
+      15 => {
+        let build = try!(d.read_u64());
+        let _ = try!(d.read_u64());
+        let version = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateHostFirmware(build, version)))
-        }
-      16 =>
-        Ok(Payload::Device(Device::GetWifiInfo)),
-      17 => 
-        {
-          let signal = try!(d.read_f32());
-          let tx = try!(d.read_u32());
-          let rx = try!(d.read_u32());
-          let _ = try!(d.read_i16());
+        Ok(Payload::Device(Device::StateHostFirmware(build, version)))
+      }
+      16 => Ok(Payload::Device(Device::GetWifiInfo)),
+      17 => {
+        let signal = try!(d.read_f32());
+        let tx = try!(d.read_u32());
+        let rx = try!(d.read_u32());
+        let _ = try!(d.read_i16());
 
-          Ok(Payload::Device(Device::StateWifiInfo(signal, tx, rx)))
-        }
-      18 =>
-        Ok(Payload::Device(Device::GetWifiFirmware)),
-      19 => 
-        {
-          let build = try!(d.read_u64());
-          let _ = try!(d.read_u64());
-          let version = try!(d.read_u32());
+        Ok(Payload::Device(Device::StateWifiInfo(signal, tx, rx)))
+      }
+      18 => Ok(Payload::Device(Device::GetWifiFirmware)),
+      19 => {
+        let build = try!(d.read_u64());
+        let _ = try!(d.read_u64());
+        let version = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateWifiFirmware(build, version)))
-        }
-      20 =>
-        Ok(Payload::Device(Device::GetPower)),
-      21 => 
-        Ok(Payload::Device(Device::SetPower(From::from(try!(d.read_u16()))))),
-      22 =>
-        Ok(Payload::Device(Device::StatePower(From::from(try!(d.read_u16()))))),
-      23 =>
-        Ok(Payload::Device(Device::GetLabel)),
-      25 => 
-        {
-          let label = try!(decode_32_byte_str(d));
+        Ok(Payload::Device(Device::StateWifiFirmware(build, version)))
+      }
+      20 => Ok(Payload::Device(Device::GetPower)),
+      21 => Ok(Payload::Device(Device::SetPower(From::from(try!(d.read_u16()))))),
+      22 => Ok(Payload::Device(Device::StatePower(From::from(try!(d.read_u16()))))),
+      23 => Ok(Payload::Device(Device::GetLabel)),
+      25 => {
+        let label = try!(decode_32_byte_str(d));
 
-          Ok(Payload::Device(Device::StateLabel(label)))
-        },
-      32 =>
-        Ok(Payload::Device(Device::GetVersion)),
-      33 =>
-        {
-          let vendor = try!(d.read_u32());
-          let product = try!(d.read_u32());
-          let version = try!(d.read_u32());
+        Ok(Payload::Device(Device::StateLabel(label)))
+      }
+      32 => Ok(Payload::Device(Device::GetVersion)),
+      33 => {
+        let vendor = try!(d.read_u32());
+        let product = try!(d.read_u32());
+        let version = try!(d.read_u32());
 
-          Ok(Payload::Device(Device::StateVersion(vendor, product, version)))
-        }
-      34 =>
-        Ok(Payload::Device(Device::GetInfo)),
-      35 =>
-        {
-          let time = try!(d.read_u64());
-          let uptime = try!(d.read_u64());
-          let downtime = try!(d.read_u64());
+        Ok(Payload::Device(Device::StateVersion(vendor, product, version)))
+      }
+      34 => Ok(Payload::Device(Device::GetInfo)),
+      35 => {
+        let time = try!(d.read_u64());
+        let uptime = try!(d.read_u64());
+        let downtime = try!(d.read_u64());
 
-          Ok(Payload::Device(Device::StateInfo(time, uptime, downtime)))
-        }
-      45 =>
-        Ok(Payload::Device(Device::Acknowledgement)),
-      48 =>
-        Ok(Payload::Device(Device::GetLocation)),
-      50 =>
-        {
-          let location = try!(decode_16_byte_arr(d));
-          let label = try!(decode_32_byte_str(d));
-          let updated = try!(d.read_u64());
+        Ok(Payload::Device(Device::StateInfo(time, uptime, downtime)))
+      }
+      45 => Ok(Payload::Device(Device::Acknowledgement)),
+      48 => Ok(Payload::Device(Device::GetLocation)),
+      50 => {
+        let location = try!(decode_16_byte_arr(d));
+        let label = try!(decode_32_byte_str(d));
+        let updated = try!(d.read_u64());
 
-          Ok(Payload::Device(Device::StateLocation(location, label, updated)))
-        }
-      51 => 
-        Ok(Payload::Device(Device::GetGroup)),
-      53 =>
-        {
-          let group = try!(decode_16_byte_arr(d));
-          let label = try!(decode_32_byte_str(d));
-          let updated = try!(d.read_u64());
+        Ok(Payload::Device(Device::StateLocation(location, label, updated)))
+      }
+      51 => Ok(Payload::Device(Device::GetGroup)),
+      53 => {
+        let group = try!(decode_16_byte_arr(d));
+        let label = try!(decode_32_byte_str(d));
+        let updated = try!(d.read_u64());
 
-          Ok(Payload::Device(Device::StateGroup(group, label, updated)))
-        }
-      58 =>
-        Ok(Payload::Device(Device::EchoRequest(try!(decode_64_byte_arr(d))))),
-      59 =>
-        Ok(Payload::Device(Device::EchoResponse(try!(decode_64_byte_arr(d))))),
-      101 => 
-        Ok(Payload::Light(Light::Get)),
-      102 => 
-        {
-          let _ = try!(d.read_u8());
-          let color = try!(HSBK::decode(d));
-          let duration = try!(d.read_u32());
+        Ok(Payload::Device(Device::StateGroup(group, label, updated)))
+      }
+      58 => Ok(Payload::Device(Device::EchoRequest(try!(decode_64_byte_arr(d))))),
+      59 => Ok(Payload::Device(Device::EchoResponse(try!(decode_64_byte_arr(d))))),
+      101 => Ok(Payload::Light(Light::Get)),
+      102 => {
+        let _ = try!(d.read_u8());
+        let color = try!(HSBK::decode(d));
+        let duration = try!(d.read_u32());
 
-          Ok(Payload::Light(Light::SetColor(color, duration)))
-        }
-      107 =>
-        {
-          let color = try!(HSBK::decode(d));
-          let _ = try!(d.read_i16());
-          let power = try!(d.read_u16());
-          let label = try!(decode_32_byte_str(d));
-          let _ = try!(d.read_u64());
+        Ok(Payload::Light(Light::SetColor(color, duration)))
+      }
+      107 => {
+        let color = try!(HSBK::decode(d));
+        let _ = try!(d.read_i16());
+        let power = try!(d.read_u16());
+        let label = try!(decode_32_byte_str(d));
+        let _ = try!(d.read_u64());
 
-          Ok(Payload::Light(Light::State(color, power, label)))
-        }
-      116 =>
-        Ok(Payload::Light(Light::GetPower)),
-      117 =>
-        {
-          let level = From::from(try!(d.read_u16()));
-          let duration = try!(d.read_u32());
+        Ok(Payload::Light(Light::State(color, power, label)))
+      }
+      116 => Ok(Payload::Light(Light::GetPower)),
+      117 => {
+        let level = From::from(try!(d.read_u16()));
+        let duration = try!(d.read_u32());
 
-          Ok(Payload::Light(Light::SetPower(level, duration)))
-        }
-      118 => 
-        Ok(Payload::Light(Light::StatePower(From::from(try!(d.read_u16()))))),
-      _ => 
-        Err(d.error("unrecognized message"))
+        Ok(Payload::Light(Light::SetPower(level, duration)))
+      }
+      118 => Ok(Payload::Light(Light::StatePower(From::from(try!(d.read_u16()))))),
+      _ => Err(d.error("unrecognized message")),
     }
-  } 
+  }
 }
 
 
@@ -461,7 +443,7 @@ pub enum Device {
   GetGroup,
   StateGroup([u8; 16], String, u64),
   EchoRequest([u8; 64]),
-  EchoResponse([u8; 64])
+  EchoResponse([u8; 64]),
 }
 
 impl Device {
@@ -495,7 +477,7 @@ impl Device {
       GetGroup => 51,
       StateGroup(_, _, _) => 53,
       EchoRequest(_) => 58,
-      EchoResponse(_) => 59
+      EchoResponse(_) => 59,
     }
   }
 
@@ -505,7 +487,7 @@ impl Device {
 
     match *self {
       GetService => true,
-      _ => false
+      _ => false,
     }
   }
 
@@ -514,10 +496,20 @@ impl Device {
     use Device::*;
 
     match *self {
-      GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | 
-      GetWifiFirmware | GetPower | SetPower(_) | GetLabel | GetVersion | 
-      GetInfo | GetLocation | GetGroup | EchoRequest(_) => true,
-      _ => false
+      GetService |
+      GetHostInfo |
+      GetHostFirmware |
+      GetWifiInfo |
+      GetWifiFirmware |
+      GetPower |
+      SetPower(_) |
+      GetLabel |
+      GetVersion |
+      GetInfo |
+      GetLocation |
+      GetGroup |
+      EchoRequest(_) => true,
+      _ => false,
     }
   }
 
@@ -526,9 +518,18 @@ impl Device {
     use Device::*;
 
     match *self {
-      GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | 
-      GetWifiFirmware | GetPower | GetLabel| GetVersion | GetInfo | 
-      Acknowledgement | GetLocation | GetGroup => 0,
+      GetService |
+      GetHostInfo |
+      GetHostFirmware |
+      GetWifiInfo |
+      GetWifiFirmware |
+      GetPower |
+      GetLabel |
+      GetVersion |
+      GetInfo |
+      Acknowledgement |
+      GetLocation |
+      GetGroup => 0,
       SetPower(_) | StatePower(_) => 2,
       StateService(_, _) => 5,
       StateVersion(_, _, _) => 12,
@@ -537,7 +538,7 @@ impl Device {
       StateInfo(_, _, _) => 24,
       StateLabel(_) => 32,
       StateLocation(_, _, _) | StateGroup(_, _, _) => 56,
-      EchoRequest(_) | EchoResponse(_) => 64
+      EchoRequest(_) | EchoResponse(_) => 64,
     }
   }
 }
@@ -547,58 +548,38 @@ impl Debug for Device {
     use Device::*;
 
     match *self {
-      GetService => 
-        write!(f, "GetService"),
-      StateService(serv, port) => 
-        write!(f, "StateService({:?}, {})", serv, port),
-      GetHostInfo => 
-        write!(f, "GetHostInfo"),
-      StateHostInfo(signal, tx, rx) =>
-        write!(f, "StateHostInfo({}, {}, {})", signal, tx, rx),
-      GetHostFirmware => 
-        write!(f, "GetHostFirmware"),
-      StateHostFirmware(build, version) =>
-        write!(f, "StateHostFirmware({}, {})", build, version),
-      GetWifiInfo =>
-        write!(f, "GetWifiInfo"),
-      StateWifiInfo(signal, tx, rx) =>
-        write!(f, "StateWifiInfo({}, {}, {})", signal, tx, rx),
-      GetWifiFirmware =>
-        write!(f, "GetWifiFirmware"),
-      StateWifiFirmware(build, version) =>
-        write!(f, "StateWifiFirmware({}, {})", build, version),
-      GetPower =>
-        write!(f, "GetPower"),
-      SetPower(pow) =>
-        write!(f, "SetPower({:?})", pow),
-      StatePower(pow) =>
-        write!(f, "StatePower({:?})", pow),
-      GetLabel =>
-        write!(f, "GetLabel"),
-      StateLabel(ref label) =>
-        write!(f, "StateLabel({})", label),
-      GetVersion =>
-        write!(f, "GetVersion"),
-      StateVersion(vendor, product, version) =>
-        write!(f, "StateVersion({}, {}, {})", vendor, product, version),
-      GetInfo =>
-        write!(f, "GetInfo"),
-      StateInfo(time, uptime, downtime) =>
-        write!(f, "StateInfo({}, {}, {})", time, uptime, downtime),
-      Acknowledgement =>
-        write!(f, "Acknowledgement"),
-      GetLocation =>
-        write!(f, "GetLocation"),
-      StateLocation(_, ref label, updated) =>
-        write!(f, "StateLocation([16], {}, {})", label, updated),
-      GetGroup =>
-        write!(f, "GetGroup"),
-      StateGroup(_, ref label, updated) => 
-        write!(f, "StateGroup([16], {}, {})", label, updated),
-      EchoRequest(_) => 
-        write!(f, "EchoRequest([64])"),
-      EchoResponse(_) => 
-        write!(f, "EchoResponse([64])")
+      GetService => write!(f, "GetService"),
+      StateService(serv, port) => write!(f, "StateService({:?}, {})", serv, port),
+      GetHostInfo => write!(f, "GetHostInfo"),
+      StateHostInfo(signal, tx, rx) => write!(f, "StateHostInfo({}, {}, {})", signal, tx, rx),
+      GetHostFirmware => write!(f, "GetHostFirmware"),
+      StateHostFirmware(build, version) => write!(f, "StateHostFirmware({}, {})", build, version),
+      GetWifiInfo => write!(f, "GetWifiInfo"),
+      StateWifiInfo(signal, tx, rx) => write!(f, "StateWifiInfo({}, {}, {})", signal, tx, rx),
+      GetWifiFirmware => write!(f, "GetWifiFirmware"),
+      StateWifiFirmware(build, version) => write!(f, "StateWifiFirmware({}, {})", build, version),
+      GetPower => write!(f, "GetPower"),
+      SetPower(pow) => write!(f, "SetPower({:?})", pow),
+      StatePower(pow) => write!(f, "StatePower({:?})", pow),
+      GetLabel => write!(f, "GetLabel"),
+      StateLabel(ref label) => write!(f, "StateLabel({})", label),
+      GetVersion => write!(f, "GetVersion"),
+      StateVersion(vendor, product, version) => {
+        write!(f, "StateVersion({}, {}, {})", vendor, product, version)
+      }
+      GetInfo => write!(f, "GetInfo"),
+      StateInfo(time, uptime, downtime) => {
+        write!(f, "StateInfo({}, {}, {})", time, uptime, downtime)
+      }
+      Acknowledgement => write!(f, "Acknowledgement"),
+      GetLocation => write!(f, "GetLocation"),
+      StateLocation(_, ref label, updated) => {
+        write!(f, "StateLocation([16], {}, {})", label, updated)
+      }
+      GetGroup => write!(f, "GetGroup"),
+      StateGroup(_, ref label, updated) => write!(f, "StateGroup([16], {}, {})", label, updated),
+      EchoRequest(_) => write!(f, "EchoRequest([64])"),
+      EchoResponse(_) => write!(f, "EchoResponse([64])"),
     }
   }
 }
@@ -610,10 +591,10 @@ impl Debug for Device {
 pub enum Light {
   Get,
   SetColor(HSBK, u32),
-  State(HSBK, u16, String),  
+  State(HSBK, u16, String),
   GetPower,
   SetPower(Power, u32),
-  StatePower(Power)
+  StatePower(Power),
 }
 
 impl Light {
@@ -627,12 +608,14 @@ impl Light {
       State(_, _, _) => 107,
       GetPower => 116,
       SetPower(_, _) => 117,
-      StatePower(_) => 118
+      StatePower(_) => 118,
     }
   }
 
   #[inline]
-  pub fn tagged(&self) -> bool { false }
+  pub fn tagged(&self) -> bool {
+    false
+  }
 
   #[inline]
   pub fn requires_response(&self) -> bool {
@@ -640,7 +623,7 @@ impl Light {
 
     match *self {
       Get | GetPower | SetPower(_, _) | SetColor(_, _) => true,
-      _ => false
+      _ => false,
     }
   }
 
@@ -653,7 +636,7 @@ impl Light {
       StatePower(_) => 2,
       SetPower(_, _) => 6,
       SetColor(_, _) => 13,
-      State(_, _, _) => 24
+      State(_, _, _) => 24,
     }
   }
 }

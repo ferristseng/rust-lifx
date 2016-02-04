@@ -7,7 +7,7 @@ use rustc_serialize::{Encoder, Encodable, Decoder, Decodable};
 
 /// encodes a series of bytes
 ///
-pub fn encode<T : Encodable>(data: &T) -> Result<Vec<u8>, String> {
+pub fn encode<T: Encodable>(data: &T) -> Result<Vec<u8>, String> {
   let mut encoder = ByteEncoder::new();
   try!(data.encode(&mut encoder));
   Ok(encoder.bytes)
@@ -15,14 +15,14 @@ pub fn encode<T : Encodable>(data: &T) -> Result<Vec<u8>, String> {
 
 /// decodes a series of bytes
 ///
-pub fn decode<T : Decodable>(data: &[u8]) -> Result<T, String> {
+pub fn decode<T: Decodable>(data: &[u8]) -> Result<T, String> {
   let mut decoder = ByteDecoder::new(data);
   T::decode(&mut decoder)
 }
 
 
 struct ByteEncoder {
-  bytes: Vec<u8>
+  bytes: Vec<u8>,
 }
 
 impl ByteEncoder {
@@ -137,176 +137,135 @@ impl Encoder for ByteEncoder {
   }
 
   #[inline]
-  fn emit_enum<F>(&mut self, _: &str, f: F) -> Result<(), Self::Error> 
-    where F: FnOnce(&mut Self) -> Result<(), Self::Error> 
-  {
-    f(self)
-  }
-
-  #[inline]
-  fn emit_enum_variant<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    _: usize, f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_enum<F>(&mut self, _: &str, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_enum_variant_arg<F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_enum_variant<F>(&mut self, _: &str, _: usize, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_enum_struct_variant<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_enum_variant_arg<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_enum_struct_variant_field<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_enum_struct_variant<F>(&mut self,
+                                 _: &str,
+                                 _: usize,
+                                 _: usize,
+                                 f: F)
+                                 -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_struct<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_enum_struct_variant_field<F>(&mut self,
+                                       _: &str,
+                                       _: usize,
+                                       f: F)
+                                       -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_struct_field<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_struct<F>(&mut self, _: &str, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_tuple<F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_struct_field<F>(&mut self, _: &str, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
 
   #[inline]
-  fn emit_tuple_arg<F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_tuple<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn emit_tuple_struct<F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_tuple_arg<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn emit_tuple_struct_arg<F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_tuple_struct<F>(&mut self, _: &str, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn emit_option<F>(
-    &mut self, 
-    f: F
-  ) -> Result<(), Self::Error> 
+  fn emit_tuple_struct_arg<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
- 
+
+  #[inline]
+  fn emit_option<F>(&mut self, f: F) -> Result<(), Self::Error>
+    where F: FnOnce(&mut Self) -> Result<(), Self::Error>
+  {
+    f(self)
+  }
+
   fn emit_option_none(&mut self) -> Result<(), Self::Error> {
     self.emit_u8(0)
   }
-  
-  fn emit_option_some<F>(&mut self, f: F) -> Result<(), Self::Error> 
+
+  fn emit_option_some<F>(&mut self, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     try!(self.emit_u8(1));
     f(self)
   }
-  
-  fn emit_seq<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error> 
+
+  fn emit_seq<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
 
     f(self)
   }
-  
-  fn emit_seq_elt<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error> 
+
+  fn emit_seq_elt<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
-  fn emit_map<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error> 
+
+  fn emit_map<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
-  fn emit_map_elt_key<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error> 
+
+  fn emit_map_elt_key<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
   }
-  
-  fn emit_map_elt_val<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error> 
+
+  fn emit_map_elt_val<F>(&mut self, _: usize, f: F) -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
@@ -315,7 +274,7 @@ impl Encoder for ByteEncoder {
 
 
 struct ByteDecoder<'a> {
-  cursor: Cursor<&'a [u8]>
+  cursor: Cursor<&'a [u8]>,
 }
 
 impl<'a> ByteDecoder<'a> {
@@ -324,20 +283,34 @@ impl<'a> ByteDecoder<'a> {
     ByteDecoder { cursor: Cursor::new(bytes) }
   }
 
-  fn read_char_with_first_byte(
-    &mut self, 
-    first: u8
-  ) -> Result<char, String> 
-  {
+  fn read_char_with_first_byte(&mut self, first: u8) -> Result<char, String> {
     let mut c = 0;
     let len = match first & 0b1111_1100 {
-      0b0000_0000 => { c |= first as u32; 1 }
-      0b1100_0000 => { c |= (first & 0b0001_1111) as u32; 2 }
-      0b1110_0000 => { c |= (first & 0b0000_1111) as u32; 3 }
-      0b1111_0000 => { c |= (first & 0b0000_0111) as u32; 4 }
-      0b1111_1000 => { c |= (first & 0b0000_0011) as u32; 5 }
-      0b1111_1100 => { c |= (first & 0b0000_0001) as u32; 6 }
-      _ => panic!("unexpected first byte")
+      0b0000_0000 => {
+        c |= first as u32;
+        1
+      }
+      0b1100_0000 => {
+        c |= (first & 0b0001_1111) as u32;
+        2
+      }
+      0b1110_0000 => {
+        c |= (first & 0b0000_1111) as u32;
+        3
+      }
+      0b1111_0000 => {
+        c |= (first & 0b0000_0111) as u32;
+        4
+      }
+      0b1111_1000 => {
+        c |= (first & 0b0000_0011) as u32;
+        5
+      }
+      0b1111_1100 => {
+        c |= (first & 0b0000_0001) as u32;
+        6
+      }
+      _ => panic!("unexpected first byte"),
     };
 
     for _ in 1..len {
@@ -354,14 +327,16 @@ impl<'a> Decoder for ByteDecoder<'a> {
   type Error = String;
 
   #[inline(always)]
-  fn read_nil(&mut self) -> Result<(), Self::Error> { Ok(()) }
+  fn read_nil(&mut self) -> Result<(), Self::Error> {
+    Ok(())
+  }
 
   #[inline]
   fn read_usize(&mut self) -> Result<usize, Self::Error> {
     self.cursor
-      .read_uint::<LittleEndian>(mem::size_of::<usize>())
-      .and_then(|v| Ok(v as usize))
-      .or(err!("read usize failed"))
+        .read_uint::<LittleEndian>(mem::size_of::<usize>())
+        .and_then(|v| Ok(v as usize))
+        .or(err!("read usize failed"))
   }
 
   #[inline]
@@ -387,9 +362,9 @@ impl<'a> Decoder for ByteDecoder<'a> {
   #[inline]
   fn read_isize(&mut self) -> Result<isize, Self::Error> {
     self.cursor
-      .read_int::<LittleEndian>(mem::size_of::<isize>())
-      .and_then(|v| Ok(v as isize))
-      .or(err!("read isize failed"))
+        .read_int::<LittleEndian>(mem::size_of::<isize>())
+        .and_then(|v| Ok(v as isize))
+        .or(err!("read isize failed"))
   }
 
   #[inline]
@@ -440,7 +415,9 @@ impl<'a> Decoder for ByteDecoder<'a> {
     loop {
       let b = try!(self.read_u8());
 
-      if b == 0b0000_0000 { break; }
+      if b == 0b0000_0000 {
+        break;
+      }
 
       s.push(try!(self.read_char_with_first_byte(b)));
     }
@@ -449,158 +426,123 @@ impl<'a> Decoder for ByteDecoder<'a> {
   }
 
   #[inline]
-  fn read_enum<T, F>(&mut self, _: &str, f: F) -> Result<T, Self::Error> 
+  fn read_enum<T, F>(&mut self, _: &str, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_enum_variant<T, F>(
-    &mut self, 
-    _: &[&str], 
-    mut f: F
-  ) -> Result<T, Self::Error> 
+  fn read_enum_variant<T, F>(&mut self, _: &[&str], mut f: F) -> Result<T, Self::Error>
     where F: FnMut(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
   }
-  
+
   #[inline]
-  fn read_enum_variant_arg<T, F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_enum_variant_arg<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_enum_struct_variant<T, F>(
-    &mut self, 
-    _: &[&str], 
-    mut f: F
-  ) -> Result<T, Self::Error> 
-    where F: FnMut(&mut Self, usize) -> Result<T, Self::Error> 
+  fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], mut f: F) -> Result<T, Self::Error>
+    where F: FnMut(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
   }
-  
+
   #[inline]
-  fn read_enum_struct_variant_field<T, F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F) -> Result<T, Self::Error> 
+  fn read_enum_struct_variant_field<T, F>(&mut self,
+                                          _: &str,
+                                          _: usize,
+                                          f: F)
+                                          -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_struct<T, F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_struct<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_struct_field<T, F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_struct_field<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_tuple<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error> 
+  fn read_tuple<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_tuple_arg<T, F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_tuple_arg<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_tuple_struct<T, F>(
-    &mut self, 
-    _: &str, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_tuple_struct<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_tuple_struct_arg<T, F>(
-    &mut self, 
-    _: usize, 
-    f: F
-  ) -> Result<T, Self::Error> 
+  fn read_tuple_struct_arg<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Self::Error> 
+  fn read_option<T, F>(&mut self, mut f: F) -> Result<T, Self::Error>
     where F: FnMut(&mut Self, bool) -> Result<T, Self::Error>
   {
     f(self, false)
   }
-  
+
   #[inline]
-  fn read_seq<T, F>(&mut self, f: F) -> Result<T, Self::Error> 
+  fn read_seq<T, F>(&mut self, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
   }
-  
+
   #[inline]
-  fn read_seq_elt<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error> 
+  fn read_seq_elt<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_map<T, F>(&mut self, f: F) -> Result<T, Self::Error> 
+  fn read_map<T, F>(&mut self, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
   }
-  
+
   #[inline]
-  fn read_map_elt_key<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error> 
+  fn read_map_elt_key<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
   }
-  
+
   #[inline]
-  fn read_map_elt_val<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error> 
+  fn read_map_elt_val<T, F>(&mut self, _: usize, f: F) -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)

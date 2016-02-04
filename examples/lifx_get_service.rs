@@ -1,5 +1,3 @@
-#![feature(thread_sleep)]
-
 extern crate lifx;
 extern crate env_logger;
 
@@ -21,12 +19,12 @@ fn main() {
   thread::sleep(Duration::from_secs(10));
 
   let devices = {
-    let devices = client.devices(); 
+    let devices = client.devices();
 
     if devices.len() == 0 {
-      println!("Waiting 15 more seconds to discover devices..."); 
+      println!("Waiting 15 more seconds to discover devices...");
       println!("  This might be caused by a busy network...");
-      
+
       thread::sleep(Duration::from_secs(15));
 
       client.devices()
