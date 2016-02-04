@@ -18,13 +18,19 @@ to add to or modify the code!
 
 ### Setup
 
-`cargo build` will build the library and all of the examples. 
-`rust-lifx` tracks the nightly branch of Rust, so that it can use the 
-most up-to-date `net2` features.
+Setup is done using `cargo`. Just run:
 
 ```
   cargo build
 ```
+
+There are a number of examples you can run to test things out. To see some info
+about bulbs configured on your network, you can run:
+
+```
+  cargo run  --example lifx_get_service
+```
+
 
 ### Configure the logger to print while running examples
 
@@ -32,7 +38,7 @@ To configure the logger to print out useful information while running the exampl
 run:
 
 ```
-  source ./config_logger.sh
+  export RUST_LOG=device.in=info,device.out=info
 ```
 
 For more detailed control, you can set the logging level for the following 

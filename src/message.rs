@@ -30,14 +30,11 @@ impl Message {
     }
   }
 
+  /// unpacks a message into a tuple of (payload, target).
+  ///
   #[inline(always)]
-  pub fn payload(&self) -> &Payload {
-    &self.payload
-  }
-
-  #[inline(always)]
-  pub fn target(&self) -> u64 {
-    self.header.target()
+  pub fn unpack(self) -> (Payload, u64) {
+    (self.payload, self.header.target())
   }
 }
 
@@ -61,9 +58,9 @@ impl Decodable for Message {
   fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
     d.read_struct("Header", 0, |mut d| {
       let header = try!(d.read_struct_field("header", 0, |mut d| Header::decode(d)));
-      let message = try!(d.read_struct_field("payload",
-                                             0,
-                                             |mut d| Payload::decode(d, header.typ())));
+      let message = try!(d.read_struct_field("payload", 0, |mut d| {
+        Payload::decode(d, header.typ())
+      }));
 
       Ok(Message {
         header: header,

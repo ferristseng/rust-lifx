@@ -144,7 +144,12 @@ impl Encoder for ByteEncoder {
   }
 
   #[inline]
-  fn emit_enum_variant<F>(&mut self, _: &str, _: usize, _: usize, f: F) -> Result<(), Self::Error>
+  fn emit_enum_variant<F>(&mut self,
+                          _: &str,
+                          _: usize,
+                          _: usize,
+                          f: F)
+                          -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
@@ -188,7 +193,11 @@ impl Encoder for ByteEncoder {
   }
 
   #[inline]
-  fn emit_struct_field<F>(&mut self, _: &str, _: usize, f: F) -> Result<(), Self::Error>
+  fn emit_struct_field<F>(&mut self,
+                          _: &str,
+                          _: usize,
+                          f: F)
+                          -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
@@ -209,7 +218,11 @@ impl Encoder for ByteEncoder {
   }
 
   #[inline]
-  fn emit_tuple_struct<F>(&mut self, _: &str, _: usize, f: F) -> Result<(), Self::Error>
+  fn emit_tuple_struct<F>(&mut self,
+                          _: &str,
+                          _: usize,
+                          f: F)
+                          -> Result<(), Self::Error>
     where F: FnOnce(&mut Self) -> Result<(), Self::Error>
   {
     f(self)
@@ -433,7 +446,10 @@ impl<'a> Decoder for ByteDecoder<'a> {
   }
 
   #[inline]
-  fn read_enum_variant<T, F>(&mut self, _: &[&str], mut f: F) -> Result<T, Self::Error>
+  fn read_enum_variant<T, F>(&mut self,
+                             _: &[&str],
+                             mut f: F)
+                             -> Result<T, Self::Error>
     where F: FnMut(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
@@ -447,7 +463,10 @@ impl<'a> Decoder for ByteDecoder<'a> {
   }
 
   #[inline]
-  fn read_enum_struct_variant<T, F>(&mut self, _: &[&str], mut f: F) -> Result<T, Self::Error>
+  fn read_enum_struct_variant<T, F>(&mut self,
+                                    _: &[&str],
+                                    mut f: F)
+                                    -> Result<T, Self::Error>
     where F: FnMut(&mut Self, usize) -> Result<T, Self::Error>
   {
     f(self, 0)
@@ -472,7 +491,11 @@ impl<'a> Decoder for ByteDecoder<'a> {
   }
 
   #[inline]
-  fn read_struct_field<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Self::Error>
+  fn read_struct_field<T, F>(&mut self,
+                             _: &str,
+                             _: usize,
+                             f: F)
+                             -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)
@@ -493,7 +516,11 @@ impl<'a> Decoder for ByteDecoder<'a> {
   }
 
   #[inline]
-  fn read_tuple_struct<T, F>(&mut self, _: &str, _: usize, f: F) -> Result<T, Self::Error>
+  fn read_tuple_struct<T, F>(&mut self,
+                             _: &str,
+                             _: usize,
+                             f: F)
+                             -> Result<T, Self::Error>
     where F: FnOnce(&mut Self) -> Result<T, Self::Error>
   {
     f(self)

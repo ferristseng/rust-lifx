@@ -1,9 +1,8 @@
 extern crate lifx;
 extern crate env_logger;
 
-use lifx::Client;
 use lifx::Light::*;
-use lifx::{Payload, Power};
+use lifx::{Client, Payload, Power};
 
 
 const TARGET: u64 = 3732340569040;
