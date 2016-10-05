@@ -116,10 +116,10 @@ impl Encoder for ByteEncoder {
   #[inline]
   fn emit_char(&mut self, v: char) -> Result<(), Self::Error> {
     let mut buf = [0; 4];
-    let encoded = try!(v.encode_utf8(&mut buf[..]).ok_or("failed to encode utf8"));
+    let encoded = v.encode_utf8(&mut buf[..]);
 
-    for b in buf[0..encoded].iter() {
-      try!(self.emit_u8(*b))
+    for b in encoded.bytes() {
+      try!(self.emit_u8(b))
     }
 
     Ok(())

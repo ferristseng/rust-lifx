@@ -60,7 +60,7 @@ fn send_msg<S: Deref<Target = UdpSocket>, A: ToSocketAddrs>
 
 
 bitflags! {
-  flags DiscoverOptions: u8 {
+  pub flags DiscoverOptions: u8 {
     const GET_LABEL         = 0b0000_0001,
     const GET_WIFI          = 0b0000_0010,
     const GET_LOCATION      = 0b0000_0100,

@@ -391,8 +391,8 @@ impl Payload {
 
         Ok(Payload::Device(Device::StateGroup(group, label, updated)))
       }
-      58 => Ok(Payload::Device(Device::EchoRequest(try!(decode_64_byte_arr(d))))),
-      59 => Ok(Payload::Device(Device::EchoResponse(try!(decode_64_byte_arr(d))))),
+      58 => Ok(Payload::Device(Device::EchoRequest(Array64(try!(decode_64_byte_arr(d)))))),
+      59 => Ok(Payload::Device(Device::EchoResponse(Array64(try!(decode_64_byte_arr(d)))))),
       101 => Ok(Payload::Light(Light::Get)),
       102 => {
         let _ = try!(d.read_u8());
@@ -420,6 +420,22 @@ impl Payload {
       118 => Ok(Payload::Light(Light::StatePower(From::from(try!(d.read_u16()))))),
       _ => Err(d.error("unrecognized message")),
     }
+  }
+}
+
+
+pub struct Array64<T>(pub [T; 64]);
+
+impl<T> Encodable for Array64<T> where T: Encodable
+{
+  fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+    let &Array64(ref inner) = self;
+    s.emit_seq(64, |s| {
+      for i in 0..64 {
+        try!(s.emit_seq_elt(i, |s| inner[i].encode(s)));
+      }
+      Ok(())
+    })
   }
 }
 
@@ -452,8 +468,8 @@ pub enum Device {
   StateLocation([u8; 16], String, u64),
   GetGroup,
   StateGroup([u8; 16], String, u64),
-  EchoRequest([u8; 64]),
-  EchoResponse([u8; 64]),
+  EchoRequest(Array64<u8>),
+  EchoResponse(Array64<u8>),
 }
 
 impl Device {
