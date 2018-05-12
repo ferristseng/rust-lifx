@@ -5,10 +5,10 @@ authors = ["Ferris Tseng"]
 
 [dependencies]
 log = "*"
-bitflags = "*"
+bitflags = "1.0"
 byteorder = "*"
 rustc-serialize = "*"
 net2 = { version = "*", features = ["nightly"] }
 
 [dev-dependencies]
-env_logger = "*"
+env_logger = "0.5.10"
