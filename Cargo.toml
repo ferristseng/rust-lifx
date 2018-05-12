@@ -1,6 +1,6 @@
 [package]
 name = "lifx"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Ferris Tseng"]
 
 [dependencies]
