@@ -1,12 +1,10 @@
-use std::fmt::{Formatter, Debug, Error};
+use std::fmt::{Debug, Error, Formatter};
 
 use header::Header;
 use payload::Payload;
-use rustc_serialize::{Encoder, Encodable, Decoder, Decodable};
-
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 const CLIENT_ID: u32 = 1111;
-
 
 pub struct Message {
   header: Header,
@@ -18,14 +16,16 @@ impl Message {
   ///
   pub fn new(msg: Payload, ack_required: bool, target: u64, seq: u8) -> Message {
     Message {
-      header: Header::new(msg.size() + Header::mem_size(),
-                          msg.tagged(),
-                          CLIENT_ID,
-                          target,
-                          ack_required,
-                          msg.requires_response(),
-                          seq,
-                          msg.typ()),
+      header: Header::new(
+        msg.size() + Header::mem_size(),
+        msg.tagged(),
+        CLIENT_ID,
+        target,
+        ack_required,
+        msg.requires_response(),
+        seq,
+        msg.typ(),
+      ),
       payload: msg,
     }
   }
@@ -58,9 +58,11 @@ impl Decodable for Message {
   fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
     d.read_struct("Header", 0, |mut d| {
       let header = try!(d.read_struct_field("header", 0, |mut d| Header::decode(d)));
-      let message = try!(d.read_struct_field("payload", 0, |mut d| {
-        Payload::decode(d, header.typ())
-      }));
+      let message = try!(d.read_struct_field(
+        "payload",
+        0,
+        |mut d| Payload::decode(d, header.typ())
+      ));
 
       Ok(Message {
         header: header,

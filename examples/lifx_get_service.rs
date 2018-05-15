@@ -1,11 +1,10 @@
-extern crate lifx;
 extern crate env_logger;
+extern crate lifx;
 
 use std::thread;
 use std::time::Duration;
 
-use lifx::{DiscoverOptions, Client};
-
+use lifx::{Client, DiscoverOptions};
 
 fn main() {
   env_logger::init();

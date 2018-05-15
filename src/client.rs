@@ -1,31 +1,27 @@
+use std::collections::HashMap;
+use std::fmt::{Debug, Display, Error, Formatter};
+use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::ops::{Deref, Drop};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
+use std::sync::{Arc, RwLock};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use std::sync::{Arc, RwLock};
-use std::sync::atomic::{Ordering, AtomicBool, AtomicUsize, ATOMIC_USIZE_INIT};
-use std::ops::{Deref, Drop};
-use std::fmt::{Display, Debug, Formatter, Error};
-use std::collections::HashMap;
-use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 
-use serialize;
 use message::Message;
-use payload::{Service, Payload, Device, Light};
 use net2::{UdpBuilder, UdpSocketExt};
-
+use payload::{Device, Light, Payload, Service};
+use serialize;
 
 pub const MESSAGE_INTERVAL: u8 = 50;
-
 
 /// udp broadcast ip address and lifx default port.
 ///
 static BROADCAST_IP: &'static str = "255.255.255.255:56700";
 
-
 /// sequence number counter used to confirm acks.
 ///
 static SEQUENCE_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
-
 
 /// returns the next sequence number (global, shared counter).
 ///
@@ -33,21 +29,23 @@ fn next_sequence() -> u8 {
   SEQUENCE_COUNTER.fetch_add(1, Ordering::SeqCst) as u8
 }
 
-
 /// sends a message to the specified address.
 ///
-fn send_msg<S: Deref<Target = UdpSocket>, A: ToSocketAddrs>
-  (socket: &S,
-   addr: A,
-   payload: Payload,
-   ack_required: bool,
-   target: u64)
-   -> Result<u8, String> {
+fn send_msg<S: Deref<Target = UdpSocket>, A: ToSocketAddrs>(
+  socket: &S,
+  addr: A,
+  payload: Payload,
+  ack_required: bool,
+  target: u64,
+) -> Result<u8, String> {
   let seq = next_sequence();
   let msg = Message::new(payload, ack_required, target, seq);
   let encoded = try!(serialize::encode(&msg).or(err!("failed to encode")));
-  let bytes = try!(socket.send_to(&encoded[..], addr)
-                         .or(err!("failed to send message")));
+  let bytes = try!(
+    socket
+      .send_to(&encoded[..], addr)
+      .or(err!("failed to send message"))
+  );
 
   debug!(target: "device.out", "    Sending: {:?}", msg);
 
@@ -57,7 +55,6 @@ fn send_msg<S: Deref<Target = UdpSocket>, A: ToSocketAddrs>
     err!("wrong number of bytes written")
   }
 }
-
 
 bitflags! {
   pub struct DiscoverOptions: u8 {
@@ -76,7 +73,6 @@ bitflags! {
   }
 }
 
-
 /// a bulb is a LiFX device where the service is Udp.
 ///
 #[derive(Clone)]
@@ -89,7 +85,9 @@ pub struct Bulb<A: ToSocketAddrs> {
   socket: Arc<UdpSocket>,
 }
 
-impl<A> Bulb<A> where A: ToSocketAddrs
+impl<A> Bulb<A>
+where
+  A: ToSocketAddrs,
 {
   /// returns the label of the bulb, if one was received.
   ///
@@ -102,49 +100,58 @@ impl<A> Bulb<A> where A: ToSocketAddrs
 
   /// sends a message to this bulb.
   ///
-  pub fn send_msg(&self,
-                  payload: Payload,
-                  ack_required: bool)
-                  -> Result<u8, String> {
+  pub fn send_msg(
+    &self,
+    payload: Payload,
+    ack_required: bool,
+  ) -> Result<u8, String> {
     send_msg(&self.socket, &self.ip, payload, ack_required, self.target)
   }
 
   /// sends a message to this bulb, and waits the recommended amount of time.
   ///
-  pub fn send_msg_and_wait(&self,
-                           payload: Payload,
-                           ack_required: bool)
-                           -> Result<u8, String> {
+  pub fn send_msg_and_wait(
+    &self,
+    payload: Payload,
+    ack_required: bool,
+  ) -> Result<u8, String> {
     let res = self.send_msg(payload, ack_required);
     thread::sleep(Duration::from_millis(MESSAGE_INTERVAL as u64));
     res
   }
 }
 
-impl<A> Display for Bulb<A> where A: ToSocketAddrs + Display
+impl<A> Display for Bulb<A>
+where
+  A: ToSocketAddrs + Display,
 {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-    write!(f,
-           "'{:?}' ({}:{} {})",
-           self.label(),
-           self.ip,
-           self.port,
-           self.target)
+    write!(
+      f,
+      "'{:?}' ({}:{} {})",
+      self.label(),
+      self.ip,
+      self.port,
+      self.target
+    )
   }
 }
 
-impl<A> Debug for Bulb<A> where A: ToSocketAddrs + Debug
+impl<A> Debug for Bulb<A>
+where
+  A: ToSocketAddrs + Debug,
 {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-    write!(f,
-           "Bulb ({}):\nLabel: '{:?}'\nAddr.: {:?}:{}",
-           self.target,
-           self.label(),
-           self.ip,
-           self.port)
+    write!(
+      f,
+      "Bulb ({}):\nLabel: '{:?}'\nAddr.: {:?}:{}",
+      self.target,
+      self.label(),
+      self.ip,
+      self.port
+    )
   }
 }
-
 
 /// the client handles device messages from from any lifx bulb.
 ///
@@ -160,15 +167,22 @@ impl Client {
   pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Client, String> {
     let closed = Arc::new(AtomicBool::new(false));
     let devices = Arc::new(RwLock::new(HashMap::new()));
-    let udp_builder = try!(UdpBuilder::new_v4()
-                             .or(err!("failed to create builder")));
-    let udp_socket = Arc::new(try!(udp_builder.bind(addr)
-                                              .or(err!("failed to bind to addr"))));
+    let udp_builder =
+      try!(UdpBuilder::new_v4().or(err!("failed to create builder")));
+    let udp_socket = Arc::new(try!(
+      udp_builder.bind(addr).or(err!("failed to bind to addr"))
+    ));
 
-    try!(udp_socket.set_read_timeout_ms(Some(500))
-                   .or(err!("failed to set read timeout")));
-    try!(udp_socket.set_write_timeout_ms(Some(500))
-                   .or(err!("failed to set write timeout")));
+    try!(
+      udp_socket
+        .set_read_timeout_ms(Some(500))
+        .or(err!("failed to set read timeout"))
+    );
+    try!(
+      udp_socket
+        .set_write_timeout_ms(Some(500))
+        .or(err!("failed to set write timeout"))
+    );
 
     let client = Client {
       closed: closed,
@@ -272,11 +286,8 @@ impl Client {
         // should not be able to be sent between the time the socket is set to
         // broadcast.
         let _ = socket.set_broadcast(true);
-        let _ = send_msg(&socket,
-                         BROADCAST_IP,
-                         Payload::Device(GetService),
-                         false,
-                         0);
+        let _ =
+          send_msg(&socket, BROADCAST_IP, Payload::Device(GetService), false, 0);
         let _ = socket.set_broadcast(false);
 
         for d in devices.read().unwrap().values() {
@@ -301,13 +312,13 @@ impl Client {
           }
 
           if !(options & DiscoverOptions::GET_HOST_FIRMWARE).is_empty() {
-            let _ = d.send_msg_and_wait(Payload::Device(Device::GetHostFirmware),
-                                        false);
+            let _ =
+              d.send_msg_and_wait(Payload::Device(Device::GetHostFirmware), false);
           }
 
           if !(options & DiscoverOptions::GET_WIFI).is_empty() {
-            let _ = d.send_msg_and_wait(Payload::Device(Device::GetWifiFirmware),
-                                        false);
+            let _ =
+              d.send_msg_and_wait(Payload::Device(Device::GetWifiFirmware), false);
           }
         }
 
@@ -318,12 +329,13 @@ impl Client {
 
   /// sends a message to the specified address.
   ///
-  pub fn send_msg<A: ToSocketAddrs>(&self,
-                                    addr: A,
-                                    payload: Payload,
-                                    ack_required: bool,
-                                    target: u64)
-                                    -> Result<u8, String> {
+  pub fn send_msg<A: ToSocketAddrs>(
+    &self,
+    addr: A,
+    payload: Payload,
+    ack_required: bool,
+    target: u64,
+  ) -> Result<u8, String> {
     send_msg(&self.socket, addr, payload, ack_required, target)
   }
 
@@ -362,7 +374,6 @@ impl Drop for Client {
     self.close();
   }
 }
-
 
 #[test]
 fn test_sequence_counter_overflow() {

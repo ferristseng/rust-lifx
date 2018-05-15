@@ -1,17 +1,14 @@
 use std::convert::Into;
-use std::fmt::{Debug, Formatter, Error};
+use std::fmt::{Debug, Error, Formatter};
 
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
-
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 
 /// Max allowable brightness.
 ///
 pub const MAX_BRIGHTNESS: u16 = ::std::u16::MAX;
 
-
 const MAX_SATURATION: u16 = ::std::u16::MAX;
 const DEFAULT_KELVIN: u16 = 3500;
-
 
 /// Preseeded HSBK values for convenience.
 ///
@@ -33,58 +30,45 @@ impl Color {
     use Color::*;
 
     match self {
-      Red => {
-        HSBK {
-          hue: 0,
-          saturation: MAX_SATURATION,
-          brightness: brightness,
-          kelvin: DEFAULT_KELVIN,
-        }
-      }
-      Blue => {
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0,
-        }
-      }
-      Green => {
-        HSBK {
-          hue: 120,
-          saturation: MAX_SATURATION,
-          brightness: brightness,
-          kelvin: DEFAULT_KELVIN,
-        }
-      }
-      Violet => {
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0,
-        }
-      }
-      Yellow => {
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0,
-        }
-      }
-      White => {
-        HSBK {
-          hue: 0,
-          saturation: 0,
-          brightness: brightness,
-          kelvin: 0,
-        }
-      }
+      Red => HSBK {
+        hue: 0,
+        saturation: MAX_SATURATION,
+        brightness: brightness,
+        kelvin: DEFAULT_KELVIN,
+      },
+      Blue => HSBK {
+        hue: 0,
+        saturation: 0,
+        brightness: brightness,
+        kelvin: 0,
+      },
+      Green => HSBK {
+        hue: 120,
+        saturation: MAX_SATURATION,
+        brightness: brightness,
+        kelvin: DEFAULT_KELVIN,
+      },
+      Violet => HSBK {
+        hue: 0,
+        saturation: 0,
+        brightness: brightness,
+        kelvin: 0,
+      },
+      Yellow => HSBK {
+        hue: 0,
+        saturation: 0,
+        brightness: brightness,
+        kelvin: 0,
+      },
+      White => HSBK {
+        hue: 0,
+        saturation: 0,
+        brightness: brightness,
+        kelvin: 0,
+      },
     }
   }
 }
-
 
 /// Labels from a LiFX blub are always 32 byte strings (not null terminated).
 /// Decodes a 32 byte string.
@@ -103,7 +87,6 @@ fn decode_32_byte_str<D: Decoder>(d: &mut D) -> Result<String, D::Error> {
   unsafe { Ok(String::from_utf8_unchecked(s)) }
 }
 
-
 /// Decodes a 16 byte array.
 ///
 fn decode_16_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 16], D::Error> {
@@ -114,7 +97,6 @@ fn decode_16_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 16], D::Error> {
   Ok(arr)
 }
 
-
 /// Decodes a 64 byte array.
 ///
 fn decode_64_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
@@ -124,7 +106,6 @@ fn decode_64_byte_arr<D: Decoder>(d: &mut D) -> Result<[u8; 64], D::Error> {
   }
   Ok(arr)
 }
-
 
 /// Service enumeration.
 ///
@@ -174,7 +155,6 @@ impl Encodable for Service {
   }
 }
 
-
 /// Power level for Device::SetPower and Device::GetPower.
 ///
 #[derive(Debug, Copy, Clone)]
@@ -217,11 +197,11 @@ impl Encodable for Power {
       Max => "Max",
     };
 
-    s.emit_enum("Power",
-                |s| s.emit_enum_variant(var, id as usize, 0, |s| s.emit_u16(id)))
+    s.emit_enum("Power", |s| {
+      s.emit_enum_variant(var, id as usize, 0, |s| s.emit_u16(id))
+    })
   }
 }
-
 
 /// HSBK (Hue, Saturation, Brightness, Kelvin)
 ///
@@ -245,7 +225,6 @@ impl HSBK {
     }
   }
 }
-
 
 /// Payload enumeration.
 ///
@@ -350,8 +329,12 @@ impl Payload {
         Ok(Payload::Device(Device::StateWifiFirmware(build, version)))
       }
       20 => Ok(Payload::Device(Device::GetPower)),
-      21 => Ok(Payload::Device(Device::SetPower(From::from(try!(d.read_u16()))))),
-      22 => Ok(Payload::Device(Device::StatePower(From::from(try!(d.read_u16()))))),
+      21 => Ok(Payload::Device(Device::SetPower(From::from(try!(
+        d.read_u16()
+      ))))),
+      22 => Ok(Payload::Device(Device::StatePower(From::from(try!(
+        d.read_u16()
+      ))))),
       23 => Ok(Payload::Device(Device::GetLabel)),
       25 => {
         let label = try!(decode_32_byte_str(d));
@@ -364,7 +347,9 @@ impl Payload {
         let product = try!(d.read_u32());
         let version = try!(d.read_u32());
 
-        Ok(Payload::Device(Device::StateVersion(vendor, product, version)))
+        Ok(Payload::Device(Device::StateVersion(
+          vendor, product, version,
+        )))
       }
       34 => Ok(Payload::Device(Device::GetInfo)),
       35 => {
@@ -381,7 +366,9 @@ impl Payload {
         let label = try!(decode_32_byte_str(d));
         let updated = try!(d.read_u64());
 
-        Ok(Payload::Device(Device::StateLocation(location, label, updated)))
+        Ok(Payload::Device(Device::StateLocation(
+          location, label, updated,
+        )))
       }
       51 => Ok(Payload::Device(Device::GetGroup)),
       53 => {
@@ -391,8 +378,12 @@ impl Payload {
 
         Ok(Payload::Device(Device::StateGroup(group, label, updated)))
       }
-      58 => Ok(Payload::Device(Device::EchoRequest(Array64(try!(decode_64_byte_arr(d)))))),
-      59 => Ok(Payload::Device(Device::EchoResponse(Array64(try!(decode_64_byte_arr(d)))))),
+      58 => Ok(Payload::Device(Device::EchoRequest(Array64(try!(
+        decode_64_byte_arr(d)
+      ))))),
+      59 => Ok(Payload::Device(Device::EchoResponse(Array64(try!(
+        decode_64_byte_arr(d)
+      ))))),
       101 => Ok(Payload::Light(Light::Get)),
       102 => {
         let _ = try!(d.read_u8());
@@ -417,16 +408,19 @@ impl Payload {
 
         Ok(Payload::Light(Light::SetPower(level, duration)))
       }
-      118 => Ok(Payload::Light(Light::StatePower(From::from(try!(d.read_u16()))))),
+      118 => Ok(Payload::Light(Light::StatePower(From::from(try!(
+        d.read_u16()
+      ))))),
       _ => Err(d.error("unrecognized message")),
     }
   }
 }
 
-
 pub struct Array64<T>(pub [T; 64]);
 
-impl<T> Encodable for Array64<T> where T: Encodable
+impl<T> Encodable for Array64<T>
+where
+  T: Encodable,
 {
   fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
     let &Array64(ref inner) = self;
@@ -438,7 +432,6 @@ impl<T> Encodable for Array64<T> where T: Encodable
     })
   }
 }
-
 
 /// Device message.
 ///
@@ -522,19 +515,9 @@ impl Device {
     use Device::*;
 
     match *self {
-      GetService |
-      GetHostInfo |
-      GetHostFirmware |
-      GetWifiInfo |
-      GetWifiFirmware |
-      GetPower |
-      SetPower(_) |
-      GetLabel |
-      GetVersion |
-      GetInfo |
-      GetLocation |
-      GetGroup |
-      EchoRequest(_) => true,
+      GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | GetWifiFirmware
+      | GetPower | SetPower(_) | GetLabel | GetVersion | GetInfo | GetLocation
+      | GetGroup | EchoRequest(_) => true,
       _ => false,
     }
   }
@@ -544,18 +527,9 @@ impl Device {
     use Device::*;
 
     match *self {
-      GetService |
-      GetHostInfo |
-      GetHostFirmware |
-      GetWifiInfo |
-      GetWifiFirmware |
-      GetPower |
-      GetLabel |
-      GetVersion |
-      GetInfo |
-      Acknowledgement |
-      GetLocation |
-      GetGroup => 0,
+      GetService | GetHostInfo | GetHostFirmware | GetWifiInfo | GetWifiFirmware
+      | GetPower | GetLabel | GetVersion | GetInfo | Acknowledgement
+      | GetLocation | GetGroup => 0,
       SetPower(_) | StatePower(_) => 2,
       StateService(_, _) => 5,
       StateVersion(_, _, _) => 12,
@@ -620,7 +594,6 @@ impl Debug for Device {
   }
 }
 
-
 /// Light messages.
 ///
 #[derive(Debug)]
@@ -681,40 +654,37 @@ impl Encodable for Light {
   fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
     use Light::*;
 
-    s.emit_enum("Light", |s| {
-      match *self {
-        Get => s.emit_enum_variant("Get", 0, self.size() as usize, |s| s.emit_nil()),
-        SetColor(color, power) => {
-          s.emit_enum_variant("SetColor", 1, self.size() as usize, |s| {
-            try!(s.emit_enum_variant_arg(0, |s| s.emit_u8(0)));
-            try!(s.emit_enum_variant_arg(1, |s| color.encode(s)));
-            s.emit_enum_variant_arg(2, |s| s.emit_u32(power))
-          })
-        }
-        State(color, power, ref label) => {
-          s.emit_enum_variant("State", 2, self.size() as usize, |s| {
-            try!(s.emit_enum_variant_arg(0, |s| color.encode(s)));
-            try!(s.emit_enum_variant_arg(1, |s| s.emit_u16(0)));
-            try!(s.emit_enum_variant_arg(2, |s| s.emit_u16(power)));
-            try!(s.emit_enum_variant_arg(3, |s| label.encode(s)));
-            s.emit_enum_variant_arg(3, |s| s.emit_u64(0))
-          })
-        }
-        GetPower => {
-          s.emit_enum_variant("GetPower", 3, self.size() as usize, |s| s.emit_nil())
-        }
-        SetPower(level, duration) => {
-          s.emit_enum_variant("SetPower", 4, self.size() as usize, |s| {
-            try!(s.emit_enum_variant_arg(0, |s| level.encode(s)));
-            s.emit_enum_variant_arg(1, |s| s.emit_u32(duration))
-          })
-        }
-        StatePower(level) => {
-          s.emit_enum_variant("StatePower",
-                              5,
-                              self.size() as usize,
-                              |s| s.emit_enum_variant_arg(0, |s| level.encode(s)))
-        }
+    s.emit_enum("Light", |s| match *self {
+      Get => s.emit_enum_variant("Get", 0, self.size() as usize, |s| s.emit_nil()),
+      SetColor(color, power) => {
+        s.emit_enum_variant("SetColor", 1, self.size() as usize, |s| {
+          try!(s.emit_enum_variant_arg(0, |s| s.emit_u8(0)));
+          try!(s.emit_enum_variant_arg(1, |s| color.encode(s)));
+          s.emit_enum_variant_arg(2, |s| s.emit_u32(power))
+        })
+      }
+      State(color, power, ref label) => {
+        s.emit_enum_variant("State", 2, self.size() as usize, |s| {
+          try!(s.emit_enum_variant_arg(0, |s| color.encode(s)));
+          try!(s.emit_enum_variant_arg(1, |s| s.emit_u16(0)));
+          try!(s.emit_enum_variant_arg(2, |s| s.emit_u16(power)));
+          try!(s.emit_enum_variant_arg(3, |s| label.encode(s)));
+          s.emit_enum_variant_arg(3, |s| s.emit_u64(0))
+        })
+      }
+      GetPower => {
+        s.emit_enum_variant("GetPower", 3, self.size() as usize, |s| s.emit_nil())
+      }
+      SetPower(level, duration) => {
+        s.emit_enum_variant("SetPower", 4, self.size() as usize, |s| {
+          try!(s.emit_enum_variant_arg(0, |s| level.encode(s)));
+          s.emit_enum_variant_arg(1, |s| s.emit_u32(duration))
+        })
+      }
+      StatePower(level) => {
+        s.emit_enum_variant("StatePower", 5, self.size() as usize, |s| {
+          s.emit_enum_variant_arg(0, |s| level.encode(s))
+        })
       }
     })
   }
