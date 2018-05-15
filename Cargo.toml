@@ -2,6 +2,7 @@
 name = "lifx"
 version = "0.1.2"
 authors = ["Ferris Tseng"]
+license = "MIT"
 
 [dependencies]
 log = "*"
