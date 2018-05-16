@@ -105,7 +105,13 @@ where
     payload: Payload,
     ack_required: bool,
   ) -> Result<u8, String> {
-    send_msg(&self.socket, &self.ip, payload, ack_required, self.target)
+    send_msg(
+      &self.socket,
+      &self.ip,
+      payload,
+      ack_required,
+      self.target,
+    )
   }
 
   /// sends a message to this bulb, and waits the recommended amount of time.
@@ -170,7 +176,9 @@ impl Client {
     let udp_builder =
       try!(UdpBuilder::new_v4().or(err!("failed to create builder")));
     let udp_socket = Arc::new(try!(
-      udp_builder.bind(addr).or(err!("failed to bind to addr"))
+      udp_builder
+        .bind(addr)
+        .or(err!("failed to bind to addr"))
     ));
 
     try!(
@@ -223,14 +231,18 @@ impl Client {
           Payload::Device(Device::StateService(Service::Udp, port)) => {
             info!(target: "device.in", "Received device with port: {}", port);
 
-            devices.write().unwrap().entry(target).or_insert(Bulb {
-              label: None,
-              location: None,
-              ip: src,
-              port: port,
-              target: target,
-              socket: socket.clone(),
-            });
+            devices
+              .write()
+              .unwrap()
+              .entry(target)
+              .or_insert(Bulb {
+                label: None,
+                location: None,
+                ip: src,
+                port: port,
+                target: target,
+                socket: socket.clone(),
+              });
 
             info!(target: "device.in", "Devices:");
 
@@ -286,8 +298,13 @@ impl Client {
         // should not be able to be sent between the time the socket is set to
         // broadcast.
         let _ = socket.set_broadcast(true);
-        let _ =
-          send_msg(&socket, BROADCAST_IP, Payload::Device(GetService), false, 0);
+        let _ = send_msg(
+          &socket,
+          BROADCAST_IP,
+          Payload::Device(GetService),
+          false,
+          0,
+        );
         let _ = socket.set_broadcast(false);
 
         for d in devices.read().unwrap().values() {

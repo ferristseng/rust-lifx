@@ -26,7 +26,9 @@ struct ByteEncoder {
 impl ByteEncoder {
   #[inline(always)]
   fn new() -> ByteEncoder {
-    ByteEncoder { bytes: Vec::new() }
+    ByteEncoder {
+      bytes: Vec::new(),
+    }
   }
 }
 

@@ -71,11 +71,11 @@ impl Default for Header {
 
 impl Encodable for Header {
   fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-    s.emit_struct("Header", 36, |mut s| {
+    s.emit_struct("Header", 36, |s| {
       // FRAME
-      try!(s.emit_struct_field("size", 0, |mut s| s.emit_u16(self.size)));
+      try!(s.emit_struct_field("size", 0, |s| s.emit_u16(self.size)));
       try!(
-        s.emit_struct_field("origin_tagged_addressable_protocol", 1, |mut s| {
+        s.emit_struct_field("origin_tagged_addressable_protocol", 1, |s| {
           let mut value = self.origin as u16;
           if self.tagged {
             value |= 0b0010_0000_0000_0000;
@@ -86,19 +86,17 @@ impl Encodable for Header {
           s.emit_u16(self.protocol | (value as u16))
         })
       );
-      try!(s.emit_struct_field("source", 2, |mut s| s.emit_u32(self.source)));
+      try!(s.emit_struct_field("source", 2, |s| s.emit_u32(self.source)));
 
       // FRAME ADDRESS
-      try!(s.emit_struct_field("target", 3, |mut s| s.emit_u64(self.target)));
-      try!(
-        s.emit_struct_field("res0", 4, |mut s| s.emit_seq(6, |mut s| {
-          for i in 0..6 {
-            try!(s.emit_seq_elt(i, |mut s| s.emit_u8(0)))
-          }
-          Ok(())
-        }))
-      );
-      try!(s.emit_struct_field("res1_ackreq_resreq", 5, |mut s| {
+      try!(s.emit_struct_field("target", 3, |s| s.emit_u64(self.target)));
+      try!(s.emit_struct_field("res0", 4, |s| s.emit_seq(6, |s| {
+        for i in 0..6 {
+          try!(s.emit_seq_elt(i, |s| s.emit_u8(0)))
+        }
+        Ok(())
+      })));
+      try!(s.emit_struct_field("res1_ackreq_resreq", 5, |s| {
         let mut value: u8 = 0;
         if self.ack_required {
           value |= 0b0000_0010;
@@ -108,12 +106,12 @@ impl Encodable for Header {
         }
         s.emit_u8(value)
       }));
-      try!(s.emit_struct_field("sequence", 6, |mut s| s.emit_u8(self.sequence)));
+      try!(s.emit_struct_field("sequence", 6, |s| s.emit_u8(self.sequence)));
 
       // PROTOCOL HEADER
-      try!(s.emit_struct_field("res2", 7, |mut s| s.emit_u64(0)));
-      try!(s.emit_struct_field("type", 8, |mut s| s.emit_u16(self.typ)));
-      try!(s.emit_struct_field("res3", 9, |mut s| s.emit_u16(0)));
+      try!(s.emit_struct_field("res2", 7, |s| s.emit_u64(0)));
+      try!(s.emit_struct_field("type", 8, |s| s.emit_u16(self.typ)));
+      try!(s.emit_struct_field("res3", 9, |s| s.emit_u16(0)));
 
       Ok(())
     })
@@ -124,10 +122,10 @@ impl Decodable for Header {
   fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
     let mut header: Header = Default::default();
 
-    try!(d.read_struct("Header", 36, |mut d| {
+    try!(d.read_struct("Header", 36, |d| {
       // FRAME
       try!(
-        d.read_struct_field("size", 0, |mut d| d.read_u16().and_then(|v| {
+        d.read_struct_field("size", 0, |d| d.read_u16().and_then(|v| {
           header.size = v;
           Ok(())
         }))
@@ -136,7 +134,7 @@ impl Decodable for Header {
         d.read_struct_field(
           "origin_tagged_addressable_protocol",
           1,
-          |mut d| d.read_u16().and_then(|v| {
+          |d| d.read_u16().and_then(|v| {
             header.origin = ((v & 0b1100_0000_0000_0000) >> 14) as u8;
             header.tagged = (v & 0b0010_0000_0000_0000) > 0;
             header.addressable = (v & 0b001_0000_0000_0000) > 0;
@@ -146,7 +144,7 @@ impl Decodable for Header {
         )
       );
       try!(
-        d.read_struct_field("source", 2, |mut d| d.read_u32().and_then(|v| {
+        d.read_struct_field("source", 2, |d| d.read_u32().and_then(|v| {
           header.source = v;
           Ok(())
         }))
@@ -154,42 +152,42 @@ impl Decodable for Header {
 
       // FRAME ADDRESS
       try!(
-        d.read_struct_field("target", 3, |mut d| d.read_u64().and_then(|v| {
+        d.read_struct_field("target", 3, |d| d.read_u64().and_then(|v| {
           header.target = v;
           Ok(())
         }))
       );
+      try!(d.read_struct_field("res0", 4, |d| d.read_seq(|d, _| {
+        for i in 0..6 {
+          try!(d.read_seq_elt(i, |d| d.read_u8()));
+        }
+        Ok(())
+      })));
       try!(
-        d.read_struct_field("res0", 4, |mut d| d.read_seq(|mut d, _| {
-          for i in 0..6 {
-            try!(d.read_seq_elt(i, |mut d| d.read_u8()));
+        d.read_struct_field("res1_ackreq_resreq", 5, |d| d.read_u8().and_then(
+          |v| {
+            header.ack_required = v & 0b0000_0010 > 0;
+            header.res_required = v & 0b0000_0001 > 0;
+            Ok(())
           }
-          Ok(())
-        }))
+        ))
       );
-      try!(d.read_struct_field("res1_ackreq_resreq", 5, |mut d| {
-        d.read_u8().and_then(|v| {
-          header.ack_required = v & 0b0000_0010 > 0;
-          header.res_required = v & 0b0000_0001 > 0;
-          Ok(())
-        })
-      }));
       try!(
-        d.read_struct_field("sequence", 6, |mut d| d.read_u8().and_then(|v| {
+        d.read_struct_field("sequence", 6, |d| d.read_u8().and_then(|v| {
           header.sequence = v;
           Ok(())
         }))
       );
 
       // PROTOCOL HEADER
-      try!(d.read_struct_field("res2", 7, |mut d| d.read_u64()));
+      try!(d.read_struct_field("res2", 7, |d| d.read_u64()));
       try!(
-        d.read_struct_field("type", 8, |mut d| d.read_u16().and_then(|v| {
+        d.read_struct_field("type", 8, |d| d.read_u16().and_then(|v| {
           header.typ = v;
           Ok(())
         }))
       );
-      try!(d.read_struct_field("res3", 9, |mut d| d.read_u16()));
+      try!(d.read_struct_field("res3", 9, |d| d.read_u16()));
 
       Ok(())
     }));
