@@ -1,5 +1,7 @@
 # rust-lifx
 
+[![Build Status](https://travis-ci.com/rust-homeautomation/rust-lifx.svg?branch=master)](https://travis-ci.com/rust-homeautomation/rust-lifx)
+
 ## Description
 
 `rust-lifx` provides a simple implementation of a client that can talk to any
