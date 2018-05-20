@@ -83,8 +83,7 @@ fn decode_32_byte_str<D: Decoder>(d: &mut D) -> Result<String, D::Error> {
     }
     s.push(b)
   }
-
-  unsafe { Ok(String::from_utf8_unchecked(s)) }
+  Ok(String::from_utf8(s).unwrap())
 }
 
 /// Decodes a 16 byte array.
