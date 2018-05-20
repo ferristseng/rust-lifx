@@ -30,8 +30,12 @@ fn main() {
   println!("Setting to white...");
 
   let white = HSBK::new(0, 3000, !0, 2500);
-  let _ =
-    client.send_msg(ADDR, Payload::Light(SetColor(white, DELAY)), false, TARGET);
+  let _ = client.send_msg(
+    ADDR,
+    Payload::Light(SetColor(white, DELAY)),
+    false,
+    TARGET,
+  );
 
   thread::sleep(Duration::from_secs(5));
 

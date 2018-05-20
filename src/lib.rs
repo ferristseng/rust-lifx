@@ -1,4 +1,4 @@
-#![feature(unicode)]
+// #![feature(unicode)]
 
 extern crate byteorder;
 extern crate net2;
@@ -21,6 +21,5 @@ pub mod serialize;
 pub use client::{Bulb, Client, DiscoverOptions};
 pub use header::Header;
 pub use message::Message;
-pub use payload::{
-  Color, Device, Light, Payload, Power, Service, HSBK, MAX_BRIGHTNESS,
-};
+pub use payload::{Color, Device, Light, Payload, Power, Service, HSBK,
+                  MAX_BRIGHTNESS};

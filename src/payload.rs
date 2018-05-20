@@ -149,8 +149,8 @@ impl Encodable for Service {
       Reserved => "Reserved",
     };
 
-    s.emit_enum("Service", |mut s| {
-      s.emit_enum_variant(var, id as usize, 0, |mut s| s.emit_u8(id))
+    s.emit_enum("Service", |s| {
+      s.emit_enum_variant(var, id as usize, 0, |s| s.emit_u8(id))
     })
   }
 }
@@ -309,7 +309,10 @@ impl Payload {
         let _ = try!(d.read_u64());
         let version = try!(d.read_u32());
 
-        Ok(Payload::Device(Device::StateHostFirmware(build, version)))
+        Ok(Payload::Device(Device::StateHostFirmware(
+          build,
+          version,
+        )))
       }
       16 => Ok(Payload::Device(Device::GetWifiInfo)),
       17 => {
@@ -326,7 +329,10 @@ impl Payload {
         let _ = try!(d.read_u64());
         let version = try!(d.read_u32());
 
-        Ok(Payload::Device(Device::StateWifiFirmware(build, version)))
+        Ok(Payload::Device(Device::StateWifiFirmware(
+          build,
+          version,
+        )))
       }
       20 => Ok(Payload::Device(Device::GetPower)),
       21 => Ok(Payload::Device(Device::SetPower(From::from(try!(
@@ -348,7 +354,9 @@ impl Payload {
         let version = try!(d.read_u32());
 
         Ok(Payload::Device(Device::StateVersion(
-          vendor, product, version,
+          vendor,
+          product,
+          version,
         )))
       }
       34 => Ok(Payload::Device(Device::GetInfo)),
@@ -357,7 +365,11 @@ impl Payload {
         let uptime = try!(d.read_u64());
         let downtime = try!(d.read_u64());
 
-        Ok(Payload::Device(Device::StateInfo(time, uptime, downtime)))
+        Ok(Payload::Device(Device::StateInfo(
+          time,
+          uptime,
+          downtime,
+        )))
       }
       45 => Ok(Payload::Device(Device::Acknowledgement)),
       48 => Ok(Payload::Device(Device::GetLocation)),
@@ -367,7 +379,9 @@ impl Payload {
         let updated = try!(d.read_u64());
 
         Ok(Payload::Device(Device::StateLocation(
-          location, label, updated,
+          location,
+          label,
+          updated,
         )))
       }
       51 => Ok(Payload::Device(Device::GetGroup)),
@@ -376,7 +390,11 @@ impl Payload {
         let label = try!(decode_32_byte_str(d));
         let updated = try!(d.read_u64());
 
-        Ok(Payload::Device(Device::StateGroup(group, label, updated)))
+        Ok(Payload::Device(Device::StateGroup(
+          group,
+          label,
+          updated,
+        )))
       }
       58 => Ok(Payload::Device(Device::EchoRequest(Array64(try!(
         decode_64_byte_arr(d)
@@ -572,9 +590,11 @@ impl Debug for Device {
       GetLabel => write!(f, "GetLabel"),
       StateLabel(ref label) => write!(f, "StateLabel({})", label),
       GetVersion => write!(f, "GetVersion"),
-      StateVersion(vendor, product, version) => {
-        write!(f, "StateVersion({}, {}, {})", vendor, product, version)
-      }
+      StateVersion(vendor, product, version) => write!(
+        f,
+        "StateVersion({}, {}, {})",
+        vendor, product, version
+      ),
       GetInfo => write!(f, "GetInfo"),
       StateInfo(time, uptime, downtime) => {
         write!(f, "StateInfo({}, {}, {})", time, uptime, downtime)
